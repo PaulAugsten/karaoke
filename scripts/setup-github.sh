@@ -10,7 +10,7 @@
 # Note: rulesets on *private* repos are only enforced on paid plans (Pro/Team).
 set -euo pipefail
 
-REPO="${REPO:-PaulAugsten/karaoke-picker}"
+REPO="${REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 REQUIRED_REVIEWS="${REQUIRED_REVIEWS:-0}"
 
 echo "==> Merge settings (squash only, PR title becomes the commit on main)"

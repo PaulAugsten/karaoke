@@ -1,8 +1,8 @@
-# Karaoke Picker
+# Karaoke
 
-[![CI](https://github.com/PaulAugsten/karaoke-picker/actions/workflows/ci.yml/badge.svg)](https://github.com/PaulAugsten/karaoke-picker/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/PaulAugsten/karaoke-picker/branch/main/graph/badge.svg)](https://codecov.io/gh/PaulAugsten/karaoke-picker)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/PaulAugsten/karaoke-picker/badge)](https://scorecard.dev/viewer/?uri=github.com/PaulAugsten/karaoke-picker)
+[![CI](https://github.com/PaulAugsten/karaoke/actions/workflows/ci.yml/badge.svg)](https://github.com/PaulAugsten/karaoke/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/PaulAugsten/karaoke/branch/main/graph/badge.svg)](https://codecov.io/gh/PaulAugsten/karaoke)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/PaulAugsten/karaoke/badge)](https://scorecard.dev/viewer/?uri=github.com/PaulAugsten/karaoke)
 
 
 
