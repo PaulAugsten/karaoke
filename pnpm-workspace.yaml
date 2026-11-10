@@ -1,0 +1,8 @@
+minimumReleaseAge: 4320 # 3 days in minutes, matches minimumReleaseAge in .github/renovate.json5
+
+# Dependencies allowed to run install scripts; everything else is blocked.
+allowBuilds:
+    esbuild: true
+    sharp: true
+    unrs-resolver: true
+    "@sentry/cli": true

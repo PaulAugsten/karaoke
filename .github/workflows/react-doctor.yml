@@ -1,0 +1,39 @@
+# React Doctor - finds security, performance, correctness, accessibility,
+# bundle-size, and architecture issues in React codebases.
+# Docs: https://www.react.doctor/ci
+name: React Doctor
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
+    # Also scans main on every push for a health-score trend on the default branch.
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+    group: react-doctor-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    react-doctor:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            # Reads the PR's changed files and posts the sticky summary comment.
+            pull-requests: write
+            # PR comments go through the issues API.
+            issues: write
+            # Publishes a commit status with the score (how push-to-main reports).
+            statuses: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - uses: millionco/react-doctor@695e46eee203a5d1855020191aa7e9c010a1250e # v2.4.0
+              # Full reference: https://www.react.doctor/ci
+              # with:
+              #   blocking: warning   # "error" (default) | "warning" | "none"
+              #   scope: full         # scan the whole project instead of changed files

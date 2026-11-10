@@ -1,0 +1,38 @@
+name: Uptime smoke test
+
+# Synthetic check against production: catches outages that only show up live
+# (DNS, CDN, backend connectivity) which preview/CI builds never exercise.
+# No-ops until the PRODUCTION_URL repository variable is set.
+on:
+    schedule:
+        - cron: "0 * * * *"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: uptime-smoke-test
+    cancel-in-progress: true
+
+jobs:
+    smoke:
+        if: vars.PRODUCTION_URL != ''
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - uses: ./.github/actions/setup
+            - run: pnpm exec playwright install --with-deps chromium
+            - name: Run smoke test against production
+              run: pnpm exec playwright test e2e/smoke.spec.ts --project=chromium
+              env:
+                  BASE_URL: ${{ vars.PRODUCTION_URL }}
+            - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              if: ${{ !cancelled() }}
+              with:
+                  name: uptime-smoke-report
+                  path: playwright-report/
+                  retention-days: 7

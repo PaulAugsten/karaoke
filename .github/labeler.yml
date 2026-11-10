@@ -1,0 +1,38 @@
+
+frontend:
+    - changed-files:
+          - any-glob-to-any-file:
+                - "app/**"
+                - "components/**"
+                - "public/**"
+
+backend:
+    - changed-files:
+          - any-glob-to-any-file:
+                - "lib/**"
+
+
+tests:
+    - changed-files:
+          - any-glob-to-any-file:
+                - "**/*.test.{ts,tsx}"
+                - "tests/**"
+                - "e2e/**"
+
+ci:
+    - changed-files:
+          - any-glob-to-any-file:
+                - ".github/**"
+                - ".pre-commit-config.yaml"
+
+dependencies:
+    - changed-files:
+          - any-glob-to-any-file:
+                - "package.json"
+                - "pnpm-lock.yaml"
+                - "pnpm-workspace.yaml"
+
+docs:
+    - changed-files:
+          - any-glob-to-any-file:
+                - "**/*.md"

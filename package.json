@@ -1,0 +1,71 @@
+{
+    "name": "karaoke-picker",
+    "version": "0.0.0-development",
+    "private": true,
+    "type": "module",
+    "author": "Paul Augsten <58978786+PaulAugsten@users.noreply.github.com>",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/PaulAugsten/karaoke-picker.git"
+    },
+    "scripts": {
+        "analyze": "ANALYZE=true next build",
+        "build": "next build",
+        "dev": "next dev",
+        "doctor": "pnpm dlx react-doctor@latest",
+        "format": "biome format --write .",
+        "knip": "knip",
+        "lint": "biome check .",
+        "lint:fix": "biome check --write .",
+        "lint:next": "eslint",
+        "postinstall": "node scripts/postinstall-precommit.mjs",
+        "release:dry-run": "semantic-release --dry-run --no-ci",
+        "size": "size-limit",
+        "start": "next start",
+        "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
+        "test:e2e": "playwright test",
+        "test:watch": "vitest",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@sentry/nextjs": "^11.8.0",
+        "@vercel/analytics": "^2.0.1",
+        "@vercel/speed-insights": "^2.0.0",
+        "next": "^16.4.2",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1"
+    },
+    "devDependencies": {
+        "@axe-core/playwright": "^4.14.0",
+        "@biomejs/biome": "2.6.3",
+        "@next/bundle-analyzer": "^16.4.2",
+        "@playwright/test": "^1.64.1",
+        "@semantic-release/changelog": "^7.0.0",
+        "@semantic-release/git": "^11.0.1",
+        "@size-limit/file": "^14.2.0",
+        "@tailwindcss/postcss": "^4.3.3",
+        "@testing-library/jest-dom": "^7.0.1",
+        "@testing-library/react": "^16.3.3",
+        "@types/node": "^26",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@vitejs/plugin-react": "^6.1.2",
+        "@vitest/coverage-v8": "^5.0.5",
+        "babel-plugin-react-compiler": "^1.0.0",
+        "eslint": "^9.39.5",
+        "eslint-config-next": "^16.4.2",
+        "jsdom": "^30.1.3",
+        "knip": "^6.42.1",
+        "semantic-release": "^25.0.9",
+        "size-limit": "^14.2.0",
+        "tailwindcss": "^4.3.3",
+        "typescript": "^6.0.3",
+        "vitest": "^5.0.5"
+    },
+    "packageManager": "pnpm@12.18.0",
+    "engines": {
+        "node": ">=26",
+        "pnpm": ">=11"
+    }
+}

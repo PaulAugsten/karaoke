@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Design tokens: define colors/spacing/radii here and use the generated utilities
+   (bg-surface, text-muted, ...) instead of hand-rolled CSS. */
+@theme {
+    --color-surface: oklch(0.99 0 0);
+    --color-foreground: oklch(0.21 0 0);
+    --color-muted: oklch(0.45 0 0);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-surface: oklch(0.17 0 0);
+        --color-foreground: oklch(0.96 0 0);
+        --color-muted: oklch(0.72 0 0);
+    }
+}

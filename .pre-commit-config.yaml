@@ -1,0 +1,55 @@
+# Hooks run via https://pre-commit.com - install with:
+#   pre-commit install -t pre-commit -t commit-msg -t pre-push
+# (`pnpm install` does this automatically, see scripts/postinstall-precommit.mjs)
+repos:
+    - repo: https://github.com/gitleaks/gitleaks
+      rev: v8.30.1
+      hooks:
+          # Scans staged changes before they're even committed, so secrets never leave this machine.
+          - id: gitleaks
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: check-added-large-files
+          - id: check-merge-conflict
+          - id: check-yaml
+          - id: end-of-file-fixer
+          - id: trailing-whitespace
+            args: [--markdown-linebreak-ext=md]
+    - repo: https://github.com/rhysd/actionlint
+      rev: v1.7.12
+      hooks:
+          # Catches broken workflow syntax/expressions before CI ever sees them.
+          - id: actionlint
+    - repo: https://github.com/compilerla/conventional-pre-commit
+      rev: v4.4.0
+      hooks:
+          # Conventional Commits drive automated versioning + changelog.
+          - id: conventional-pre-commit
+            stages: [commit-msg]
+    - repo: local
+      hooks:
+          - id: lint
+            name: biome check (staged files)
+            entry: pnpm exec biome check --write --no-errors-on-unmatched
+            language: system
+            files: \.(js|jsx|mjs|ts|tsx|json|jsonc|css)$
+            stages: [pre-commit]
+          - id: lint-next
+            name: eslint (staged files)
+            entry: pnpm exec eslint
+            language: system
+            files: \.(js|jsx|mjs|ts|tsx)$
+            stages: [pre-commit]
+          - id: typecheck
+            name: tsc --noEmit
+            entry: pnpm typecheck
+            language: system
+            pass_filenames: false
+            stages: [pre-push]
+          - id: build
+            name: pnpm build
+            entry: pnpm build
+            language: system
+            pass_filenames: false
+            stages: [pre-push]

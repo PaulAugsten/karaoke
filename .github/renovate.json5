@@ -1,0 +1,56 @@
+{
+    $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+    // pinGitHubActionDigests: newly added actions get pinned to a commit SHA automatically,
+    // which the "require SHA pinning" Actions policy (scripts/setup-github.sh) enforces.
+    extends: ['config:recommended', 'helpers:pinGitHubActionDigests'],
+    enabledManagers: ['npm', 'github-actions', 'pre-commit'],
+    // Renovate's pre-commit manager is opt-in.
+    'pre-commit': { enabled: true },
+    labels: ['dependencies'],
+    prConcurrentLimit: 10,
+    prHourlyLimit: 0,
+    // Matches minimumReleaseAge in pnpm-workspace.yaml; security updates bypass both.
+    minimumReleaseAge: '3 days',
+    rangeStrategy: 'bump',
+    semanticCommits: 'enabled',
+    automergeStrategy: 'squash',
+    // Exempts the dashboard issue from stale.yml.
+    dependencyDashboardLabels: ['pinned'],
+    branchPrefix: 'deps/',
+    packageRules: [
+        { matchPackageNames: ['*'], semanticCommitType: 'chore' },
+        { matchDepTypes: ['devDependencies'], semanticCommitScope: 'deps-dev' },
+        { matchManagers: ['npm'], matchUpdateTypes: ['minor', 'patch'], groupName: 'minor-and-patch' },
+        { matchManagers: ['github-actions'], matchUpdateTypes: ['minor', 'patch', 'digest'], groupName: 'github-actions' },
+        { matchManagers: ['pre-commit'], matchUpdateTypes: ['minor', 'patch'], groupName: 'pre-commit hooks' },
+        // Biome minors can change formatting or add rules; a failure must not hold up the main group.
+        { matchPackageNames: ['@biomejs/biome'], groupName: 'biome' },
+
+        // Package families that must stay on matching versions
+        { matchPackageNames: ['vitest', '@vitest/*'], groupName: 'vitest' },
+        { matchPackageNames: ['semantic-release', '@semantic-release/*'], groupName: 'semantic-release' },
+        { matchPackageNames: ['next', '@next/*', 'eslint-config-next'], groupName: 'next' },
+        { matchPackageNames: ['react', 'react-dom', '@types/react', '@types/react-dom'], groupName: 'react' },
+        { matchPackageNames: ['tailwindcss', '@tailwindcss/*'], groupName: 'tailwind' },
+        { matchPackageNames: ['size-limit', '@size-limit/*'], groupName: 'size-limit' },
+
+        { matchUpdateTypes: ['minor', 'patch', 'digest'], automerge: true },
+
+        // Don't auto-bump the framework major
+        {
+            matchPackageNames: ['next', '@next/*', 'eslint-config-next'],
+            matchUpdateTypes: ['major'],
+            dependencyDashboardApproval: true,
+        },
+        // eslint-config-next bundles eslint-plugin-react/import/jsx-a11y, which don't support ESLint 10 yet
+        // (context.getFilename removed). Lift once eslint-config-next works with v10.
+        { matchPackageNames: ['eslint'], allowedVersions: '<10' },
+        // typescript-eslint (via eslint-config-next) only supports TypeScript <6.1 so far;
+        // approve TypeScript majors from the dashboard once it catches up.
+        {
+            matchPackageNames: ['typescript'],
+            matchUpdateTypes: ['major'],
+            dependencyDashboardApproval: true,
+        },
+    ],
+}

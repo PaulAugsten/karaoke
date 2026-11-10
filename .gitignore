@@ -1,0 +1,46 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+.vscode/
+
+# env files (opt in to committing one explicitly if ever needed)
+.env*
+!.env.example
+
+# logs
+*.log
+
+# secrets
+*.pem
+
+# dependencies
+/node_modules
+.pnpm-debug.log*
+
+# testing
+/coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/.lighthouseci/
+
+# build output
+/dist
+/build
+
+# typescript
+*.tsbuildinfo
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# vercel
+.vercel
+
+# Sentry
+.env.sentry-build-plugin

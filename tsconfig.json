@@ -1,0 +1,51 @@
+{
+    "compilerOptions": {
+        // Environment Settings
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "esnext",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "jsx": "react-jsx",
+        "paths": {
+            "@/*": ["./*"]
+        },
+        "plugins": [
+            {
+                "name": "next"
+            }
+        ],
+
+        // Other Outputs
+        "noEmit": true,
+        "incremental": true,
+
+        // Stricter Typechecking Options
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+
+        // Style Options
+        "noImplicitOverride": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
+
+        // Recommended Options
+        "strict": true,
+        "isolatedModules": true,
+        "allowJs": true,
+        "esModuleInterop": true,
+        "verbatimModuleSyntax": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": [
+        "next-env.d.ts",
+        "**/*.ts",
+        "**/*.tsx",
+        "**/*.mts",
+        ".next/types/**/*.ts",
+        ".next/dev/types/**/*.ts"
+    ],
+    "exclude": ["node_modules"]
+}
