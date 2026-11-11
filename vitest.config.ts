@@ -13,7 +13,8 @@ export default defineConfig({
             reporter: ['text', 'html', 'lcov'],
             include: ['app/**', 'components/**', 'lib/**'],
             // Layouts render <html>/<body>; they're covered by the Playwright suite instead.
-            exclude: ['app/**/layout.tsx'],
+            // Stylesheets have no executable code to cover.
+            exclude: ['app/**/layout.tsx', '**/*.css'],
             // A floor that gates regressions, not a target: ratchet these up as
             // coverage improves rather than treating them as a ceiling.
             thresholds: {
