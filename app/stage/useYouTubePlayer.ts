@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 declare global {
     interface Window {
@@ -18,11 +18,11 @@ function loadYouTubeApi(): Promise<typeof YT> {
             previous?.();
             resolve(window.YT!);
         };
-        const script = document.createElement("script");
-        script.src = "https://www.youtube.com/iframe_api";
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
         script.onerror = () => {
             apiPromise = null;
-            reject(new Error("YouTube IFrame API failed to load"));
+            reject(new Error('YouTube IFrame API failed to load'));
         };
         document.head.append(script);
     });
@@ -50,16 +50,17 @@ export function useYouTubePlayer(handlers: YouTubePlayerHandlers) {
         let cancelled = false;
         let player: YT.Player | null = null;
 
-        const target = document.createElement("div");
+        const target = document.createElement('div');
         host.append(target);
 
         loadYouTubeApi()
             .then((api) => {
                 if (cancelled) return;
                 player = new api.Player(target, {
-                    width: "100%",
-                    height: "100%",
+                    width: '100%',
+                    height: '100%',
                     playerVars: {
+                        // autoplay enabled
                         autoplay: 0,
                         controls: 0,
                         rel: 0,
@@ -72,8 +73,7 @@ export function useYouTubePlayer(handlers: YouTubePlayerHandlers) {
                             playerRef.current = player;
                             setReady(true);
                         },
-                        onStateChange: (e) =>
-                            handlersRef.current.onStateChange?.(e.data),
+                        onStateChange: (e) => handlersRef.current.onStateChange?.(e.data),
                         onError: (e) => handlersRef.current.onError?.(e.data),
                     },
                 });
