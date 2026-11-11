@@ -15,6 +15,9 @@
             }
         ],
 
+        // Package types
+        "types": ["youtube", "node"],
+
         // Other Outputs
         "noEmit": true,
         "incremental": true,
