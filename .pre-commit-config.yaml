@@ -13,6 +13,7 @@ repos:
           - id: check-added-large-files
           - id: check-merge-conflict
           - id: check-yaml
+            exclude: ^pnpm-lock\.yaml$
           - id: end-of-file-fixer
           - id: trailing-whitespace
             args: [--markdown-linebreak-ext=md]
@@ -24,7 +25,6 @@ repos:
     - repo: https://github.com/compilerla/conventional-pre-commit
       rev: v4.4.0
       hooks:
-          # Conventional Commits drive automated versioning + changelog.
           - id: conventional-pre-commit
             stages: [commit-msg]
     - repo: local

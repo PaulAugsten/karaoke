@@ -142,13 +142,27 @@ ruleset="$(
 JSON
 )"
 
+if ! gh api "repos/${REPO}/environments" --jq '.environments[].name' | grep -qx 'Preview'; then
+    echo "    NOTE: no 'Preview' environment yet - skipping the required-deployment rule."
+    echo "          Re-run this script after Vercel's first preview deploy (open a PR)."
+    ruleset="$(jq 'del(.rules[] | select(.type == "required_deployments"))' <<<"${ruleset}")"
+fi
+
+apply_ruleset() {
+    local out
+    if ! out="$(gh api "$@" --input - <<<"${ruleset}")"; then
+        echo "${out}" >&2
+        return 1
+    fi
+}
+
 existing_id="$(gh api "repos/${REPO}/rulesets" --jq '.[] | select(.name == "main") | .id')"
 if [[ -n "${existing_id}" ]]; then
     echo "==> Updating ruleset 'main' (#${existing_id})"
-    gh api --method PUT "repos/${REPO}/rulesets/${existing_id}" --input - <<<"${ruleset}" >/dev/null
+    apply_ruleset --method PUT "repos/${REPO}/rulesets/${existing_id}"
 else
     echo "==> Creating ruleset 'main'"
-    gh api --method POST "repos/${REPO}/rulesets" --input - <<<"${ruleset}" >/dev/null
+    apply_ruleset --method POST "repos/${REPO}/rulesets"
 fi
 
 echo "Done."
