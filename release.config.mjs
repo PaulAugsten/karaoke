@@ -1,5 +1,6 @@
 const config = {
     branches: ['main'],
+    repositoryUrl: 'git@github.com:PaulAugsten/karaoke.git',
     plugins: [
         '@semantic-release/commit-analyzer',
         '@semantic-release/release-notes-generator',
