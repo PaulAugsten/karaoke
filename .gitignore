@@ -44,3 +44,7 @@ next-env.d.ts
 
 # Sentry
 .env.sentry-build-plugin
+
+# Supabase
+.branches
+.temp
