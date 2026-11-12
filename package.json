@@ -11,6 +11,7 @@
     "scripts": {
         "analyze": "ANALYZE=true next build",
         "build": "next build",
+        "db:types": "supabase gen types typescript --local --workdir lib > lib/supabase/database.types.ts && biome format --write lib/supabase/database.types.ts",
         "dev": "next dev",
         "doctor": "pnpm dlx react-doctor@latest",
         "format": "biome format --write .",
