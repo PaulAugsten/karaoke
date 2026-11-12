@@ -1,6 +1,6 @@
 {
     "name": "karaoke",
-    "version": "0.0.0-development",
+    "version": "1.0.0",
     "private": true,
     "type": "module",
     "author": "Paul Augsten <58978786+PaulAugsten@users.noreply.github.com>",
