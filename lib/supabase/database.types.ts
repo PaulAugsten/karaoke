@@ -191,18 +191,21 @@ export type Database = {
             };
             sessions: {
                 Row: {
+                    code: string | null;
                     ended_at: string | null;
                     id: number;
                     name: string | null;
                     started_at: string;
                 };
                 Insert: {
+                    code?: string | null;
                     ended_at?: string | null;
                     id?: number;
                     name?: string | null;
                     started_at?: string;
                 };
                 Update: {
+                    code?: string | null;
                     ended_at?: string | null;
                     id?: number;
                     name?: string | null;
@@ -446,7 +449,44 @@ export type Database = {
             [_ in never]: never;
         };
         Functions: {
-            [_ in never]: never;
+            advance_queue: {
+                Args: { p_current_id?: number; p_session_id: number };
+                Returns: {
+                    added_at: string;
+                    id: number;
+                    position: number;
+                    session_id: number;
+                    singer_id: number | null;
+                    status: Database['public']['Enums']['queue_status'];
+                    video_id: string;
+                }[];
+                SetofOptions: {
+                    from: '*';
+                    to: 'queue_items';
+                    isOneToOne: false;
+                    isSetofReturn: true;
+                };
+            };
+            create_session: {
+                Args: never;
+                Returns: {
+                    code: string | null;
+                    ended_at: string | null;
+                    id: number;
+                    name: string | null;
+                    started_at: string;
+                };
+                SetofOptions: {
+                    from: '*';
+                    to: 'sessions';
+                    isOneToOne: true;
+                    isSetofReturn: false;
+                };
+            };
+            mark_video_unplayable: {
+                Args: { p_code: number; p_video_id: string };
+                Returns: undefined;
+            };
         };
         Enums: {
             added_via: 'playlist' | 'manual';
