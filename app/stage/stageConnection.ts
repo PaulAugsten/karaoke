@@ -60,31 +60,3 @@ export async function reportUnplayable(videoId: string, code: number): Promise<v
     });
     if (error) throw error;
 }
-
-/** Calls onChange whenever a queue entry of this session changes */
-export function subscribeToQueue(
-    sessionId: number,
-    onChange: () => void,
-    onStatus?: (status: ConnectionStatus) => void,
-): () => void {
-    const supabase = createClient();
-    const channel = supabase
-        .channel(`queue:${sessionId}`)
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'queue_items',
-                filter: `session_id=eq.${sessionId}`,
-            },
-            () => onChange(),
-        )
-        .subscribe((status) => {
-            onStatus?.(status);
-            if (status === 'SUBSCRIBED') onChange();
-        });
-    return () => {
-        void supabase.removeChannel(channel);
-    };
-}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { subscribeToQueue } from '@/lib/supabase/queue';
 import {
     advanceQueue,
     type ConnectionStatus,
@@ -10,7 +11,6 @@ import {
     type QueueItem,
     reportUnplayable,
     type Session,
-    subscribeToQueue,
 } from './stageConnection';
 import { useYouTubePlayer } from './useYouTubePlayer';
 import { isPermanentError } from './youtubeErrors';
