@@ -51,7 +51,7 @@ export function Stage() {
         setError(describeError(err));
     }
 
-    /** Asks the database to move on from the entry curently playing. */
+    /** Asks the database to move on from the entry currently playing. */
     function advance() {
         if (!session || advancing.current) return;
         advancing.current = true;
@@ -63,7 +63,7 @@ export function Stage() {
             });
     }
 
-    // After a reload join the sesion named in the URL.
+    // After a reload join the session named in the URL.
     useEffect(() => {
         const code = new URLSearchParams(window.location.search).get(ROOM_PARAM);
         if (!code) return;

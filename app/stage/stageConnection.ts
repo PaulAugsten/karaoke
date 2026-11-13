@@ -52,6 +52,7 @@ export async function advanceQueue(
     if (error) throw error;
     return data;
 }
+
 export async function reportUnplayable(videoId: string, code: number): Promise<void> {
     const { error } = await createClient().rpc('mark_video_unplayable', {
         p_video_id: videoId,
