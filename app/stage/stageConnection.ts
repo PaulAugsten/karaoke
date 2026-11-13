@@ -1,10 +1,10 @@
-import type { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import type { Tables } from '@/lib/supabase/database.types';
 
 export type Session = Tables<'sessions'>;
 export type QueueItem = Tables<'queue_items'>;
-export type ConnectionStatus = 'CONNECTING' | `${REALTIME_SUBSCRIBE_STATES}`;
+
+export { type ConnectionStatus, subscribeToQueue } from '@/lib/supabase/queue';
 
 /** Creates a new session with a fresh room code. */
 export async function createSession(): Promise<Session> {
