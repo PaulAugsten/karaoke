@@ -7,7 +7,7 @@ import { LiveQueue } from './LiveQueue';
 import { SongSearch } from './SongSearch';
 
 const NAME_KEY = 'karaoke:singer-name';
-const INPUT_CLASS = 'rounded-lg border-muted/40 bg-transparent px-3 py-2 text-lg';
+const INPUT_CLASS = 'rounded-lg border border-muted/40 bg-transparent px-3 py-2 text-lg';
 
 function readSavedName(): string {
     try {
