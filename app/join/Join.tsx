@@ -52,9 +52,8 @@ export function Join({ initialCode }: { initialCode: string }) {
             setSession(joined);
         } catch (err) {
             setError(describeError(err));
-        } finally {
-            setBusy(false);
         }
+        setBusy(false);
     }
 
     if (session) {
