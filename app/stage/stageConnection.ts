@@ -1,10 +1,10 @@
-import type { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import type { Tables } from '@/lib/supabase/database.types';
 
 export type Session = Tables<'sessions'>;
 export type QueueItem = Tables<'queue_items'>;
-export type ConnectionStatus = 'CONNECTING' | `${REALTIME_SUBSCRIBE_STATES}`;
+
+export { type ConnectionStatus, subscribeToQueue } from '@/lib/supabase/queue';
 
 /** Creates a new session with a fresh room code. */
 export async function createSession(): Promise<Session> {
@@ -59,32 +59,4 @@ export async function reportUnplayable(videoId: string, code: number): Promise<v
         p_code: code,
     });
     if (error) throw error;
-}
-
-/** Calls onChange whenever a queue entry of this session changes */
-export function subscribeToQueue(
-    sessionId: number,
-    onChange: () => void,
-    onStatus?: (status: ConnectionStatus) => void,
-): () => void {
-    const supabase = createClient();
-    const channel = supabase
-        .channel(`queue:${sessionId}`)
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'queue_items',
-                filter: `session_id=eq.${sessionId}`,
-            },
-            () => onChange(),
-        )
-        .subscribe((status) => {
-            onStatus?.(status);
-            if (status === 'SUBSCRIBED') onChange();
-        });
-    return () => {
-        void supabase.removeChannel(channel);
-    };
 }

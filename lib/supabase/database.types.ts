@@ -191,21 +191,21 @@ export type Database = {
             };
             sessions: {
                 Row: {
-                    code: string | null;
+                    code: string;
                     ended_at: string | null;
                     id: number;
                     name: string | null;
                     started_at: string;
                 };
                 Insert: {
-                    code?: string | null;
+                    code: string;
                     ended_at?: string | null;
                     id?: number;
                     name?: string | null;
                     started_at?: string;
                 };
                 Update: {
-                    code?: string | null;
+                    code?: string;
                     ended_at?: string | null;
                     id?: number;
                     name?: string | null;
@@ -252,18 +252,21 @@ export type Database = {
                     created_at: string;
                     id: number;
                     name: string;
+                    user_id: string | null;
                 };
                 Insert: {
                     avatar?: string | null;
                     created_at?: string;
                     id?: number;
                     name: string;
+                    user_id?: string | null;
                 };
                 Update: {
                     avatar?: string | null;
                     created_at?: string;
                     id?: number;
                     name?: string;
+                    user_id?: string | null;
                 };
                 Relationships: [];
             };
@@ -470,7 +473,41 @@ export type Database = {
             create_session: {
                 Args: never;
                 Returns: {
-                    code: string | null;
+                    code: string;
+                    ended_at: string | null;
+                    id: number;
+                    name: string | null;
+                    started_at: string;
+                };
+                SetofOptions: {
+                    from: '*';
+                    to: 'sessions';
+                    isOneToOne: true;
+                    isSetofReturn: false;
+                };
+            };
+            enqueue_video: {
+                Args: { p_code: string; p_video_id: string };
+                Returns: {
+                    added_at: string;
+                    id: number;
+                    position: number;
+                    session_id: number;
+                    singer_id: number | null;
+                    status: Database['public']['Enums']['queue_status'];
+                    video_id: string;
+                };
+                SetofOptions: {
+                    from: '*';
+                    to: 'queue_items';
+                    isOneToOne: true;
+                    isSetofReturn: false;
+                };
+            };
+            join_session: {
+                Args: { p_code: string; p_name: string };
+                Returns: {
+                    code: string;
                     ended_at: string | null;
                     id: number;
                     name: string | null;
@@ -486,6 +523,14 @@ export type Database = {
             mark_video_unplayable: {
                 Args: { p_code: number; p_video_id: string };
                 Returns: undefined;
+            };
+            search_videos: {
+                Args: { p_query: string };
+                Returns: {
+                    artist: string;
+                    title: string;
+                    video_id: string;
+                }[];
             };
         };
         Enums: {

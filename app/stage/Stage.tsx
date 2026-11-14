@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { describeError } from '@/lib/describeError';
 import {
     advanceQueue,
     type ConnectionStatus,
@@ -16,11 +17,6 @@ import { useYouTubePlayer } from './useYouTubePlayer';
 import { isPermanentError } from './youtubeErrors';
 
 const ROOM_PARAM = 'room';
-
-function describeError(err: unknown): string {
-    console.error(err);
-    return err instanceof Error ? err.message : String(err);
-}
 
 export function Stage() {
     const [session, setSession] = useState<Session | null>(null);
