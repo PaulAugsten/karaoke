@@ -243,6 +243,19 @@ describe('Stage', () => {
         expect(window.location.search).toBe('');
     });
 
+    it('shows an error and stays in the room when ending fails', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        endSession.mockRejectedValueOnce(new Error('network down'));
+        addEntry(FIRST);
+        await startedStage();
+
+        clickButton('End party');
+        clickButton('End party');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+        expect(screen.getByText(SESSION.code)).toBeInTheDocument();
+    });
+
     it('keeps the party going when ending is cancelled', async () => {
         addEntry(FIRST);
         await startedStage();
