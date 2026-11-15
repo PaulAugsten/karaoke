@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/[secure]/karaoke/compare/v1.2.0...v1.3.0) (2026-11-15)
+
+
+### Features
+
+* add karaoke catalog import ([#7](https://github.com/[secure]/karaoke/issues/7)) ([eba6b8d](https://github.com/[secure]/karaoke/commit/eba6b8d44c21f2843b67244710091117fc754bb2))
+
 # [1.2.0](https://github.com/[secure]/karaoke/compare/v1.1.0...v1.2.0) (2026-11-14)
 
 
