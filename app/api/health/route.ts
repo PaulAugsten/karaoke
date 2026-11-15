@@ -6,8 +6,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
  */
 export async function GET() {
     try {
-        const { error } = await createAdminClient().from('songs').select('id').limit(1);
+        const admin = createAdminClient();
+        const { error } = await admin.from('songs').select('id').limit(1);
         if (error) throw error;
+        const { error: sweepError } = await admin.rpc('close_stale_sessions');
+        if (sweepError) throw sweepError;
+
         return Response.json({ status: 'ok' }, { headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
         console.error('Health check failed', error);
