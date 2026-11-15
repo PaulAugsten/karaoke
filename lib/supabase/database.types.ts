@@ -105,27 +105,33 @@ export type Database = {
                 Row: {
                     added_at: string;
                     id: number;
+                    picked_by: Database['public']['Enums']['picked_by'];
                     position: number;
                     session_id: number;
                     singer_id: number | null;
+                    started_at: string | null;
                     status: Database['public']['Enums']['queue_status'];
                     video_id: string;
                 };
                 Insert: {
                     added_at?: string;
                     id?: number;
+                    picked_by?: Database['public']['Enums']['picked_by'];
                     position: number;
                     session_id: number;
                     singer_id?: number | null;
+                    started_at?: string | null;
                     status?: Database['public']['Enums']['queue_status'];
                     video_id: string;
                 };
                 Update: {
                     added_at?: string;
                     id?: number;
+                    picked_by?: Database['public']['Enums']['picked_by'];
                     position?: number;
                     session_id?: number;
                     singer_id?: number | null;
+                    started_at?: string | null;
                     status?: Database['public']['Enums']['queue_status'];
                     video_id?: string;
                 };
@@ -250,6 +256,7 @@ export type Database = {
                 Row: {
                     avatar: string | null;
                     created_at: string;
+                    guest_of_honour: boolean;
                     id: number;
                     name: string;
                     user_id: string | null;
@@ -257,6 +264,7 @@ export type Database = {
                 Insert: {
                     avatar?: string | null;
                     created_at?: string;
+                    guest_of_honour?: boolean;
                     id?: number;
                     name: string;
                     user_id?: string | null;
@@ -264,6 +272,7 @@ export type Database = {
                 Update: {
                     avatar?: string | null;
                     created_at?: string;
+                    guest_of_honour?: boolean;
                     id?: number;
                     name?: string;
                     user_id?: string | null;
@@ -456,13 +465,20 @@ export type Database = {
         };
         Functions: {
             advance_queue: {
-                Args: { p_current_id?: number; p_session_id: number };
+                Args: {
+                    p_current_id?: number;
+                    p_outcome?: Database['public']['Enums']['play_outcome'];
+                    p_seconds_played?: number;
+                    p_session_id: number;
+                };
                 Returns: {
                     added_at: string;
                     id: number;
+                    picked_by: Database['public']['Enums']['picked_by'];
                     position: number;
                     session_id: number;
                     singer_id: number | null;
+                    started_at: string | null;
                     status: Database['public']['Enums']['queue_status'];
                     video_id: string;
                 }[];
@@ -494,9 +510,11 @@ export type Database = {
                 Returns: {
                     added_at: string;
                     id: number;
+                    picked_by: Database['public']['Enums']['picked_by'];
                     position: number;
                     session_id: number;
                     singer_id: number | null;
+                    started_at: string | null;
                     status: Database['public']['Enums']['queue_status'];
                     video_id: string;
                 };
