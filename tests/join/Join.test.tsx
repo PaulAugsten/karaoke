@@ -4,6 +4,7 @@ import { Join } from '@/app/join/Join';
 import JoinPage from '@/app/join/page';
 import {
     addEntry,
+    closeRoom,
     enqueueVideo,
     joinSession,
     notifyChange,
@@ -114,5 +115,15 @@ describe('Join', () => {
         act(() => notifyChange());
 
         expect(await within(queue).findByText('Africa')).toBeInTheDocument();
+    });
+
+    it('returns to the form when the room ends', async () => {
+        await joinedSearchBox();
+
+        closeRoom();
+        act(() => notifyChange());
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('This party has ended.');
+        expect(screen.getByRole('button', { name: 'Join' })).toBeInTheDocument();
     });
 });

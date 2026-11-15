@@ -17,8 +17,10 @@ export const SESSION: Session = {
     name: null,
     started_at: '2026-01-01T00:00:00Z',
     ended_at: null,
+    last_active_at: '2026-01-01T00:00:00Z',
 };
 
+let open = true;
 let entries: QueueItem[] = [];
 let notify: (() => void) | null = null;
 
@@ -47,6 +49,7 @@ export function notifyChange() {
 
 export function resetFakeConnection() {
     entries = [];
+    open = true;
     notify = null;
 }
 
@@ -55,6 +58,16 @@ export const createSession = vi.fn(async () => SESSION);
 export const findOpenSession = vi.fn(async (code: string) =>
     code === SESSION.code ? SESSION : null,
 );
+
+export const isSessionOpen = vi.fn(async (_sessionId: number) => open);
+
+export function closeRoom() {
+    open = false;
+}
+
+export const endSession = vi.fn(async (_sessionId: number) => {
+    open = false;
+});
 
 export const fetchQueue = vi.fn<(sessionId: number) => Promise<QueueItem[]>>(async () =>
     entries
