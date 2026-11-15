@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/[secure]/karaoke/compare/v1.3.1...v1.4.0) (2026-11-15)
+
+
+### Features
+
+* add playlog to sessions ([#9](https://github.com/[secure]/karaoke/issues/9)) ([3fa2acf](https://github.com/[secure]/karaoke/commit/3fa2acf1246b9833f3757b7c54cbedaa4466c77b))
+
 ## [1.3.1](https://github.com/[secure]/karaoke/compare/v1.3.0...v1.3.1) (2026-11-15)
 
 
