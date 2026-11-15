@@ -8,6 +8,7 @@ export class FakePlayer {
     stopVideo = vi.fn();
     unMute = vi.fn();
     destroy = vi.fn();
+    getCurrentTime = vi.fn(() => 0);
 
     constructor(
         readonly target: HTMLElement,
