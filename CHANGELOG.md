@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/[secure]/karaoke/compare/v1.3.0...v1.3.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* similar songs can now have multiple similar songs as song_id is … ([#8](https://github.com/[secure]/karaoke/issues/8)) ([0480471](https://github.com/[secure]/karaoke/commit/04804715aa2bcb7d0fe4075f04d54924de6ba21a))
+
 # [1.3.0](https://github.com/[secure]/karaoke/compare/v1.2.0...v1.3.0) (2026-11-15)
 
 
