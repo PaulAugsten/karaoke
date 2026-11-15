@@ -222,7 +222,7 @@ export type Database = {
                 Insert: {
                     match: number;
                     similar_song_id: number;
-                    song_id?: number;
+                    song_id: number;
                 };
                 Update: {
                     match?: number;
@@ -240,7 +240,7 @@ export type Database = {
                     {
                         foreignKeyName: 'similar_songs_song_id_fkey';
                         columns: ['song_id'];
-                        isOneToOne: true;
+                        isOneToOne: false;
                         referencedRelation: 'songs';
                         referencedColumns: ['id'];
                     },
