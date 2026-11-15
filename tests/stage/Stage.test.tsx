@@ -92,7 +92,11 @@ describe('Stage', () => {
 
         act(() => player.stateChange(YT.PlayerState.ENDED));
         await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
-        expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, first.id);
+        expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, {
+            entryId: first.id,
+            outcome: 'completed',
+            secondsPlayed: 0,
+        });
 
         act(() => player.stateChange(YT.PlayerState.ENDED));
         await waitFor(() => expect(player.stopVideo).toHaveBeenCalled());
@@ -179,5 +183,44 @@ describe('Stage', () => {
         clickButton('Start');
 
         expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+    });
+
+    it('logs a completed play with the seconds played', async () => {
+        const first = addEntry(FIRST);
+        addEntry(SECOND);
+        const player = await startedStage();
+        player.getCurrentTime.mockReturnValue(214.6);
+
+        act(() => player.stateChange(YT.PlayerState.ENDED));
+
+        await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+        expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, {
+            entryId: first.id,
+            outcome: 'completed',
+            secondsPlayed: 215,
+        });
+    });
+
+    it('logs a failed video as an error', async () => {
+        const first = addEntry(FIRST);
+        addEntry(SECOND);
+        const player = await startedStage();
+        player.getCurrentTime.mockReturnValue(3.2);
+
+        act(() => player.error(150 as YT.PlayerError));
+
+        await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+        expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, {
+            entryId: first.id,
+            outcome: 'error',
+            secondsPlayed: 3,
+        });
+    });
+
+    it('starts the first entry without logging a play', async () => {
+        addEntry(FIRST);
+        await startedStage();
+
+        expect(advanceQueue).toHaveBeenCalledWith(SESSION.id, null);
     });
 });

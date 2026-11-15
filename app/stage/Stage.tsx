@@ -8,6 +8,7 @@ import {
     createSession,
     fetchQueue,
     findOpenSession,
+    type PlayOutcome,
     type QueueItem,
     reportUnplayable,
     type Session,
@@ -33,13 +34,13 @@ export function Stage() {
 
     const { containerRef, player, ready } = useYouTubePlayer({
         onStateChange: (state) => {
-            if (state === YT.PlayerState.ENDED) advance();
+            if (state === YT.PlayerState.ENDED) advance('completed');
         },
         onError: (code) => {
             if (playing && isPermanentError(code)) {
                 reportUnplayable(playing.video_id, code).catch(showError);
             }
-            advance(); // skip whatever failed
+            advance('error'); // skip whatever failed
         },
     });
 
@@ -48,10 +49,18 @@ export function Stage() {
     }
 
     /** Asks the database to move on from the entry currently playing. */
-    function advance() {
+    function advance(outcome: PlayOutcome | null) {
         if (!session || advancing.current) return;
         advancing.current = true;
-        advanceQueue(session.id, playing?.id ?? null)
+        const finished =
+            playing && outcome
+                ? {
+                      entryId: playing.id,
+                      outcome,
+                      secondsPlayed: Math.round(player.current?.getCurrentTime() ?? 0),
+                  }
+                : null;
+        advanceQueue(session.id, finished)
             .then(() => setRefreshCount((n) => n + 1))
             .catch(showError)
             .finally(() => {
@@ -115,7 +124,7 @@ export function Stage() {
 
     // Nothing playing but songs waiting: start the next one
     useEffect(() => {
-        if (started && session && !playing && hasQueued) advance();
+        if (started && session && !playing && hasQueued) advance(null);
     });
 
     async function start() {

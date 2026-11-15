@@ -1,10 +1,18 @@
 import { createClient } from '@/lib/supabase/client';
-import type { Tables } from '@/lib/supabase/database.types';
+import type { Database, Tables } from '@/lib/supabase/database.types';
 
 export type Session = Tables<'sessions'>;
 export type QueueItem = Tables<'queue_items'>;
+export type PlayOutcome = Database['public']['Enums']['play_outcome'];
 
 export { type ConnectionStatus, subscribeToQueue } from '@/lib/supabase/queue';
+
+/** How the entry that was playing came to an end. */
+export interface FinishedPlay {
+    entryId: number;
+    outcome: PlayOutcome;
+    secondsPlayed: number;
+}
 
 /** Creates a new session with a fresh room code. */
 export async function createSession(): Promise<Session> {
@@ -38,15 +46,19 @@ export async function fetchQueue(sessionId: number): Promise<QueueItem[]> {
     return data;
 }
 
-/** Marks currentId as done and the next queued entry as playing. */
+/** Marks finished play as done and the next queued entry as playing. */
 export async function advanceQueue(
     sessionId: number,
-    currentId: number | null,
+    finished: FinishedPlay | null,
 ): Promise<QueueItem | null> {
     const { data, error } = await createClient()
         .rpc('advance_queue', {
             p_session_id: sessionId,
-            ...(currentId !== null && { p_current_id: currentId }),
+            ...(finished && {
+                p_current_id: finished.entryId,
+                p_outcome: finished.outcome,
+                p_seconds_played: finished.secondsPlayed,
+            }),
         })
         .maybeSingle();
     if (error) throw error;
