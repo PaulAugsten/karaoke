@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/[secure]/karaoke/compare/v1.4.0...v1.5.0) (2026-11-15)
+
+
+### Features
+
+* room lifecycle ([#10](https://github.com/[secure]/karaoke/issues/10)) ([3cf15f5](https://github.com/[secure]/karaoke/commit/3cf15f5f15d679b5f8d563942ab66f35a2d3a990))
+
 # [1.4.0](https://github.com/[secure]/karaoke/compare/v1.3.1...v1.4.0) (2026-11-15)
 
 
