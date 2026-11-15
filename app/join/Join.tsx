@@ -63,7 +63,13 @@ export function Join({ initialCode }: { initialCode: string }) {
                     Room <span className="font-mono tracking-widest">{session.code}</span>
                 </h1>
                 <SongSearch roomCode={session.code} />
-                <LiveQueue sessionId={session.id} />
+                <LiveQueue
+                    sessionId={session.id}
+                    onEnded={() => {
+                        setSession(null);
+                        setError('This party has ended.');
+                    }}
+                />
             </main>
         );
     }
