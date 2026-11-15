@@ -113,7 +113,9 @@ export function Stage() {
                 if (open) setQueue(entries);
                 else leaveRoom();
             })
-            .catch((err) => setError(describeError(err)));
+            .catch((err) => {
+                if (!cancelled) setError(describeError(err));
+            });
         return () => {
             cancelled = true;
         };
