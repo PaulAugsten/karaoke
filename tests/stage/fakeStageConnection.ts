@@ -1,5 +1,10 @@
 import { vi } from 'vitest';
-import type { ConnectionStatus, QueueItem, Session } from '@/app/stage/stageConnection';
+import type {
+    ConnectionStatus,
+    FinishedPlay,
+    QueueItem,
+    Session,
+} from '@/app/stage/stageConnection';
 
 /**
  * In-memory stand-in for app/stage/stageConnection.ts. advanceQueue mirrors the
@@ -28,6 +33,8 @@ export function addEntry(videoId: string, status: QueueItem['status'] = 'queued'
         position: id,
         singer_id: null,
         added_at: '2026-01-01T00:00:00Z',
+        picked_by: 'queue',
+        started_at: null,
     };
     entries.push(entry);
     return entry;
@@ -55,9 +62,9 @@ export const fetchQueue = vi.fn<(sessionId: number) => Promise<QueueItem[]>>(asy
         .map((entry) => ({ ...entry })),
 );
 
-export const advanceQueue = vi.fn(async (_sessionId: number, currentId: number | null) => {
+export const advanceQueue = vi.fn(async (_sessionId: number, finished: FinishedPlay | null) => {
     const playing = entries.find((entry) => entry.status === 'playing') ?? null;
-    if ((playing?.id ?? null) !== currentId) return playing;
+    if ((playing?.id ?? null) !== (finished?.entryId ?? null)) return playing;
     if (playing) playing.status = 'done';
     const next = entries.find((entry) => entry.status === 'queued') ?? null;
     if (next) next.status = 'playing';
