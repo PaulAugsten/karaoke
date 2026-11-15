@@ -200,6 +200,7 @@ export type Database = {
                     code: string;
                     ended_at: string | null;
                     id: number;
+                    last_active_at: string;
                     name: string | null;
                     started_at: string;
                 };
@@ -207,6 +208,7 @@ export type Database = {
                     code: string;
                     ended_at?: string | null;
                     id?: number;
+                    last_active_at?: string;
                     name?: string | null;
                     started_at?: string;
                 };
@@ -214,6 +216,7 @@ export type Database = {
                     code?: string;
                     ended_at?: string | null;
                     id?: number;
+                    last_active_at?: string;
                     name?: string | null;
                     started_at?: string;
                 };
@@ -489,12 +492,14 @@ export type Database = {
                     isSetofReturn: true;
                 };
             };
+            close_stale_sessions: { Args: never; Returns: undefined };
             create_session: {
                 Args: never;
                 Returns: {
                     code: string;
                     ended_at: string | null;
                     id: number;
+                    last_active_at: string;
                     name: string | null;
                     started_at: string;
                 };
@@ -505,6 +510,7 @@ export type Database = {
                     isSetofReturn: false;
                 };
             };
+            end_session: { Args: { p_session_id: number }; Returns: undefined };
             enqueue_video: {
                 Args: { p_code: string; p_video_id: string };
                 Returns: {
@@ -525,12 +531,30 @@ export type Database = {
                     isSetofReturn: false;
                 };
             };
+            find_open_session: {
+                Args: { p_code: string };
+                Returns: {
+                    code: string;
+                    ended_at: string | null;
+                    id: number;
+                    last_active_at: string;
+                    name: string | null;
+                    started_at: string;
+                }[];
+                SetofOptions: {
+                    from: '*';
+                    to: 'sessions';
+                    isOneToOne: false;
+                    isSetofReturn: true;
+                };
+            };
             join_session: {
                 Args: { p_code: string; p_name: string };
                 Returns: {
                     code: string;
                     ended_at: string | null;
                     id: number;
+                    last_active_at: string;
                     name: string | null;
                     started_at: string;
                 };

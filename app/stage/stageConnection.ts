@@ -5,7 +5,7 @@ export type Session = Tables<'sessions'>;
 export type QueueItem = Tables<'queue_items'>;
 export type PlayOutcome = Database['public']['Enums']['play_outcome'];
 
-export { type ConnectionStatus, subscribeToQueue } from '@/lib/supabase/queue';
+export { type ConnectionStatus, isSessionOpen, subscribeToQueue } from '@/lib/supabase/queue';
 
 /** How the entry that was playing came to an end. */
 export interface FinishedPlay {
@@ -24,13 +24,18 @@ export async function createSession(): Promise<Session> {
 /** Looks up a session that is still open. */
 export async function findOpenSession(code: string): Promise<Session | null> {
     const { data, error } = await createClient()
-        .from('sessions')
-        .select('*')
-        .eq('code', code)
-        .is('ended_at', null)
+        .rpc('find_open_session', {
+            p_code: code,
+        })
         .maybeSingle();
     if (error) throw error;
     return data;
+}
+
+/** Ends the room for everyone. */
+export async function endSession(sessionId: number): Promise<void> {
+    const { error } = await createClient().rpc('end_session', { p_session_id: sessionId });
+    if (error) throw error;
 }
 
 /** The entries still relevant to the stage */

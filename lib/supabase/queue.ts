@@ -22,6 +22,18 @@ export function subscribeToQueue(
             },
             () => onChange(),
         )
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'sessions',
+                filter: `id=eq.${sessionId}`,
+            },
+            (payload) => {
+                if (payload.new.ended_at) onChange();
+            },
+        )
         .subscribe((status) => {
             onStatus?.(status);
             if (status === 'SUBSCRIBED') onChange();
@@ -29,4 +41,14 @@ export function subscribeToQueue(
     return () => {
         void supabase.removeChannel(channel);
     };
+}
+
+export async function isSessionOpen(sessionId: number): Promise<boolean> {
+    const { data, error } = await createClient()
+        .from('sessions')
+        .select('ended_at')
+        .eq('id', sessionId)
+        .maybeSingle();
+    if (error) throw error;
+    return data !== null && data.ended_at === null;
 }

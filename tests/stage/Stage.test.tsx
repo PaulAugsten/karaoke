@@ -4,7 +4,9 @@ import StagePage from '@/app/stage/page';
 import {
     addEntry,
     advanceQueue,
+    closeRoom,
     createSession,
+    endSession,
     notifyChange,
     reportUnplayable,
     resetFakeConnection,
@@ -79,7 +81,11 @@ describe('Stage', () => {
         clickButton('Start');
 
         expect(player.unMute).toHaveBeenCalled();
-        expect(screen.queryByRole('button')).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', {
+                name: 'Start',
+            }),
+        ).not.toBeInTheDocument();
         expect(await screen.findByText(SESSION.code!)).toBeInTheDocument();
         expect(window.location.search).toBe(`?room=${SESSION.code}`);
         await waitFor(() => expect(player.loadVideoById).toHaveBeenCalledWith(FIRST));
@@ -222,5 +228,53 @@ describe('Stage', () => {
         await startedStage();
 
         expect(advanceQueue).toHaveBeenCalledWith(SESSION.id, null);
+    });
+
+    it('ends the party after a second press and offers a new room', async () => {
+        addEntry(FIRST);
+        const player = await startedStage();
+
+        clickButton('End party');
+        clickButton('End party');
+
+        await screen.findByRole('button', { name: 'Start' });
+        expect(endSession).toHaveBeenCalledWith(SESSION.id);
+        expect(player.stopVideo).toHaveBeenCalled();
+        expect(window.location.search).toBe('');
+    });
+
+    it('shows an error and stays in the room when ending fails', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        endSession.mockRejectedValueOnce(new Error('network down'));
+        addEntry(FIRST);
+        await startedStage();
+
+        clickButton('End party');
+        clickButton('End party');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+        expect(screen.getByText(SESSION.code)).toBeInTheDocument();
+    });
+
+    it('keeps the party going when ending is cancelled', async () => {
+        addEntry(FIRST);
+        await startedStage();
+
+        clickButton('End party');
+        clickButton('Keep singing');
+
+        expect(endSession).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'End party' })).toBeInTheDocument();
+    });
+
+    it('goes back to Start when the room was ended elsewhere', async () => {
+        addEntry(FIRST);
+        const player = await startedStage();
+
+        closeRoom();
+        act(() => notifyChange());
+
+        await screen.findByRole('button', { name: 'Start' });
+        expect(player.stopVideo).toHaveBeenCalled();
     });
 });

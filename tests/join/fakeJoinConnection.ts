@@ -14,6 +14,7 @@ export const SESSION: Session = {
     name: null,
     started_at: '2026-01-01T00:00:00Z',
     ended_at: null,
+    last_active_at: '2026-01-01T00:00:00Z',
 };
 
 const CATALOG: SearchResult[] = [
@@ -22,6 +23,7 @@ const CATALOG: SearchResult[] = [
 ];
 
 let entries: QueueEntry[] = [];
+let open = true;
 let notify: (() => void) | null = null;
 
 /** Adds an entry to the fake queue. Call notifyChange to tell the page. */
@@ -36,6 +38,7 @@ export function notifyChange() {
 
 export function resetFakeConnection() {
     entries = [];
+    open = true;
     notify = null;
 }
 
@@ -45,6 +48,12 @@ export const joinSession = vi.fn<(code: string, name: string) => Promise<Session
     }
     return SESSION;
 });
+
+export const isSessionOpen = vi.fn<(sessionId: number) => Promise<boolean>>(async () => open);
+
+export function closeRoom() {
+    open = false;
+}
 
 export const searchVideos = vi.fn<(query: string, signal: AbortSignal) => Promise<SearchResult[]>>(
     async (query) =>

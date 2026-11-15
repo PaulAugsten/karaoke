@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { Database, Tables } from '@/lib/supabase/database.types';
 
-export { type ConnectionStatus, subscribeToQueue } from '@/lib/supabase/queue';
+export { type ConnectionStatus, isSessionOpen, subscribeToQueue } from '@/lib/supabase/queue';
 
 export type Session = Tables<'sessions'>;
 export type SearchResult = Database['public']['Functions']['search_videos']['Returns'][number];
