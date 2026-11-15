@@ -15,6 +15,7 @@
         "dev": "next dev",
         "doctor": "pnpm dlx react-doctor@latest",
         "format": "biome format --write .",
+        "import:catalog": "tsx --env-file=.env.local scripts/import-catalog.ts",
         "knip": "knip",
         "lint": "biome check .",
         "lint:fix": "biome check --write .",
@@ -65,6 +66,7 @@
         "size-limit": "^14.2.0",
         "supabase": "^3.1.0",
         "tailwindcss": "^4.3.3",
+        "tsx": "^4.23.15",
         "typescript": "^6.0.3",
         "vitest": "^5.0.5"
     },
