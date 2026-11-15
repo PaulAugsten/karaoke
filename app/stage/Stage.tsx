@@ -117,6 +117,7 @@ export function Stage() {
         return () => {
             cancelled = true;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- leaveRoom is new on every render
     }, [session, refreshCount]);
 
     // Realtime changes and reconnects trigger a reload.

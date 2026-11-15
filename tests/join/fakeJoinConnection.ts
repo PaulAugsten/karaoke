@@ -49,11 +49,7 @@ export const joinSession = vi.fn<(code: string, name: string) => Promise<Session
     return SESSION;
 });
 
-export const isSessionOpen = vi.fn(async (_sessionId: number) => open);
-
-export const endSession = vi.fn(async (_sessionId: number) => {
-    open = false;
-});
+export const isSessionOpen = vi.fn<(sessionId: number) => Promise<boolean>>(async () => open);
 
 export function closeRoom() {
     open = false;

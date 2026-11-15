@@ -59,13 +59,13 @@ export const findOpenSession = vi.fn(async (code: string) =>
     code === SESSION.code ? SESSION : null,
 );
 
-export const isSessionOpen = vi.fn(async (_sessionId: number) => open);
+export const isSessionOpen = vi.fn<(sessionId: number) => Promise<boolean>>(async () => open);
 
 export function closeRoom() {
     open = false;
 }
 
-export const endSession = vi.fn(async (_sessionId: number) => {
+export const endSession = vi.fn<(sessionId: number) => Promise<void>>(async () => {
     open = false;
 });
 
