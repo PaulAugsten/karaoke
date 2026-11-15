@@ -5,12 +5,13 @@ import { describeError } from '@/lib/describeError';
 import {
     type ConnectionStatus,
     fetchQueue,
+    isSessionOpen,
     type QueueEntry,
     subscribeToQueue,
 } from './joinConnection';
 
 /** The session's queue, refetched on every realtime change */
-function useLiveQueue(sessionId: number) {
+function useLiveQueue(sessionId: number, onEnded: () => void) {
     const [queue, setQueue] = useState<QueueEntry[] | null>(null);
     const [status, setStatus] = useState<ConnectionStatus>('CONNECTING');
     const [error, setError] = useState<string | null>(null);
@@ -19,9 +20,10 @@ function useLiveQueue(sessionId: number) {
     // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCount only triggers a reload
     useEffect(() => {
         let cancelled = false;
-        fetchQueue(sessionId)
-            .then((entries) => {
+        Promise.all([fetchQueue(sessionId), isSessionOpen(sessionId)])
+            .then(([entries, open]) => {
                 if (cancelled) return;
+                if (!open) return onEnded();
                 setQueue(entries);
                 setError(null);
             })
@@ -31,7 +33,7 @@ function useLiveQueue(sessionId: number) {
         return () => {
             cancelled = true;
         };
-    }, [sessionId, refreshCount]);
+    }, [sessionId, refreshCount, onEnded]);
 
     useEffect(() => {
         const refresh = () => setRefreshCount((n) => n + 1);
@@ -49,8 +51,8 @@ function useLiveQueue(sessionId: number) {
     return { queue, status, error };
 }
 
-export function LiveQueue({ sessionId }: { sessionId: number }) {
-    const { queue, status, error } = useLiveQueue(sessionId);
+export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: () => void }) {
+    const { queue, status, error } = useLiveQueue(sessionId, onEnded);
 
     return (
         <section aria-labelledby="queue-heading" className="flex flex-col gap-3">

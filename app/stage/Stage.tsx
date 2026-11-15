@@ -6,8 +6,10 @@ import {
     advanceQueue,
     type ConnectionStatus,
     createSession,
+    endSession,
     fetchQueue,
     findOpenSession,
+    isSessionOpen,
     type PlayOutcome,
     type QueueItem,
     reportUnplayable,
@@ -25,6 +27,7 @@ export function Stage() {
     const [refreshCount, setRefreshCount] = useState(0);
     const [status, setStatus] = useState<ConnectionStatus>('CONNECTING');
     const [started, setStarted] = useState(false);
+    const [confirmingEnd, setConfirmingEnd] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const loadedEntryId = useRef<number | null>(null);
     const advancing = useRef(false);
@@ -43,6 +46,26 @@ export function Stage() {
             advance('error'); // skip whatever failed
         },
     });
+
+    function leaveRoom() {
+        player.current?.stopVideo();
+        loadedEntryId.current = null;
+        window.history.replaceState(null, '', window.location.pathname);
+        setSession(null);
+        setQueue([]);
+        setStarted(false);
+        setConfirmingEnd(false);
+    }
+
+    async function endParty() {
+        if (!session) return;
+        try {
+            await endSession(session.id);
+            leaveRoom();
+        } catch (err) {
+            showError(err);
+        }
+    }
 
     function showError(err: unknown) {
         setError(describeError(err));
@@ -84,9 +107,11 @@ export function Stage() {
     useEffect(() => {
         if (!session) return;
         let cancelled = false;
-        fetchQueue(session.id)
-            .then((items) => {
-                if (!cancelled) setQueue(items);
+        Promise.all([fetchQueue(session.id), isSessionOpen(session.id)])
+            .then(([entries, open]) => {
+                if (cancelled) return;
+                if (open) setQueue(entries);
+                else leaveRoom();
             })
             .catch((err) => setError(describeError(err)));
         return () => {
@@ -149,6 +174,38 @@ export function Stage() {
                     <span className="font-mono text-4xl tracking-widest">{session.code}</span>
                     {status !== 'SUBSCRIBED' && (
                         <span className="block text-sm text-yellow-300">{status}</span>
+                    )}
+                </div>
+            )}
+            {started && session && (
+                <div className="fixed top-6 left-6 flex gap-3 text-xl">
+                    {confirmingEnd ? (
+                        <>
+                            <button
+                                type="button"
+                                // biome-ignore lint/a11y/noAutofocus: the safe choice should be the focused one
+                                autoFocus
+                                onClick={() => setConfirmingEnd(false)}
+                                className="rounded-xl bg-white px-5 py-3 text-black"
+                            >
+                                Keep singing
+                            </button>
+                            <button
+                                type="button"
+                                onClick={endParty}
+                                className="rounded-xl bg-red-700 px-5 py-3 text-white"
+                            >
+                                End party
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => setConfirmingEnd(true)}
+                            className="rounded-xl bg-black/70 px-5 py-3 text-white"
+                        >
+                            End party
+                        </button>
                     )}
                 </div>
             )}
