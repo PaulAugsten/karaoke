@@ -314,6 +314,7 @@ export type Database = {
                     id: number;
                     last_synced_at: string | null;
                     name: string;
+                    title_first: boolean;
                     youtube_playlist_id: string;
                 };
                 Insert: {
@@ -323,6 +324,7 @@ export type Database = {
                     id?: number;
                     last_synced_at?: string | null;
                     name: string;
+                    title_first?: boolean;
                     youtube_playlist_id: string;
                 };
                 Update: {
@@ -332,6 +334,7 @@ export type Database = {
                     id?: number;
                     last_synced_at?: string | null;
                     name?: string;
+                    title_first?: boolean;
                     youtube_playlist_id?: string;
                 };
                 Relationships: [];
