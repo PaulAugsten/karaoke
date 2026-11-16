@@ -7,7 +7,7 @@ const BOXES = Array.from({ length: LENGTH }, (_, index) => index);
 
 type RoomCodeInputProps = Omit<
     ComponentProps<'input'>,
-    'className' | 'maxLength' | 'minLength' | 'pattern' | 'pattern' | 'defaultValue' | 'value'
+    'className' | 'maxLength' | 'minLength' | 'pattern' | 'defaultValue' | 'value'
 > & { defaultValue?: string };
 
 /** The room code field */
@@ -33,7 +33,7 @@ export function RoomCodeInput({ defaultValue = '', onChange, ...props }: RoomCod
                     setLength(event.currentTarget.value.length);
                     onChange?.(event);
                 }}
-                className="peer absolute inset-y-0 left-0 w-[125cqw] bg-transparent pl-[calc(12.5cqw-0.1875rem-0.5ch)] font-bold font-mono text-2xl text-highlight uppercase tracking-[calc(25cwq+0.125rem-1ch)] outline-none"
+                className="peer absolute inset-y-0 left-0 w-[125cqw] bg-transparent pl-[calc(12.5cqw-0.1875rem-0.5ch)] font-bold font-mono text-2xl text-highlight uppercase tracking-[calc(25cqw+0.125rem-1ch)] outline-none"
             />
             {BOXES.map((index) => (
                 <span
