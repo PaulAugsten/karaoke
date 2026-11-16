@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/Button';
 import { describeError } from '@/lib/describeError';
 import {
     advanceQueue,
@@ -173,10 +174,12 @@ export function Stage() {
         <>
             <div ref={containerRef} style={{ position: 'fixed', inset: 0 }} />
             {session && (
-                <div className="fixed top-6 right-6 rounded-xl bg-black/70 px-6 py-3 text-white">
-                    <span className="font-mono text-4xl tracking-widest">{session.code}</span>
+                <div className="fixed top-6 right-6 rounded-xl border border-line bg-background/80 px-6 py-3">
+                    <span className="font-mono text-4xl text-highlight tracking-widest">
+                        {session.code}
+                    </span>
                     {status !== 'SUBSCRIBED' && (
-                        <span className="block text-sm text-yellow-300">{status}</span>
+                        <span className="block text-muted text-sm">{status}</span>
                     )}
                 </div>
             )}
@@ -184,53 +187,43 @@ export function Stage() {
                 <div className="fixed top-6 left-6 flex gap-3 text-xl">
                     {confirmingEnd ? (
                         <>
-                            <button
-                                type="button"
-                                // biome-ignore lint/a11y/noAutofocus: the safe choice should be the focused one
+                            <Button
+                                variant="outline"
+                                size="lg"
                                 autoFocus
                                 onClick={() => setConfirmingEnd(false)}
-                                className="rounded-xl bg-white px-5 py-3 text-black"
                             >
                                 Keep singing
-                            </button>
-                            <button
-                                type="button"
-                                onClick={endParty}
-                                className="rounded-xl bg-red-700 px-5 py-3 text-white"
-                            >
+                            </Button>
+                            <Button variant="danger" size="lg" onClick={endParty}>
                                 End party
-                            </button>
+                            </Button>
                         </>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={() => setConfirmingEnd(true)}
-                            className="rounded-xl bg-black/70 px-5 py-3 text-white"
-                        >
+                        <Button variant="outline" size="lg" onClick={() => setConfirmingEnd(true)}>
                             End party
-                        </button>
+                        </Button>
                     )}
                 </div>
             )}
             {error && (
                 <p
                     role="alert"
-                    className="fixed inset-x-6 bottom-6 rounded-xl bg-red-700 p-4 text-white"
+                    className="fixed inset-x-6 bottom-6 rounded-xl bg-danger p-4 font-bold text-danger-ink"
                 >
                     {error}
                 </p>
             )}
             {!started && (
-                <button
-                    type="button"
-                    // biome-ignore lint/a11y/noAutofocus: the Fire tv remote needs something focused to press
+                <Button
+                    size="xl"
                     autoFocus
                     aria-disabled={!ready}
                     onClick={start}
-                    className="fixed inset-0 m-auto h-24 w-64 rounded-xl bg-white text-3xl text-black aria-disabled:opacity-50"
+                    className="fixed inset-0 m-auto h-24 w-64"
                 >
                     {!ready ? 'Loading...' : session ? 'Resume' : 'Start'}
-                </button>
+                </Button>
             )}
         </>
     );

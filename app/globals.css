@@ -3,15 +3,31 @@
 /* Design tokens: define colors/spacing/radii here and use the generated utilities
    (bg-surface, text-muted, ...) instead of hand-rolled CSS. */
 @theme {
-    --color-surface: oklch(0.99 0 0);
-    --color-foreground: oklch(0.21 0 0);
-    --color-muted: oklch(0.45 0 0);
+    --color-background: #120e24; /* the page and the inside of fields */
+    --color-surface: #1d1838; /* panels, rows, dropdowns */
+    --color-line: #2e2752; /* decorative borders */
+    --color-field: #6f66a6; /* borders of fields: 3:1 against the page */
+    --color-foreground: #f4f1ff;
+    --color-muted: #a9a3c7;
+    --color-accent: #ff4fa3; /* pink: one element per screen */
+    --color-accent-ink: #2a0518; /* text on accent fills */
+    --color-highlight: #5ce1e6; /* cyan: room code, selected ring, "Added" */
+    --color-danger: #ff6b6b;
+    --color-danger-ink: #2a0707; /* text on danger fills */
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-surface: oklch(0.17 0 0);
-        --color-foreground: oklch(0.96 0 0);
-        --color-muted: oklch(0.72 0 0);
+@theme inline {
+    --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    html {
+        color-scheme: dark;
+        font-size: clamp(100%, min(2.6vw, 2.9vh), 400%);
+    }
+
+    :focus-visible {
+        outline: max(3px, 0.2rem) solid var(--color-highlight);
+        outline-offset: max(3px, 0.2rem);
     }
 }
