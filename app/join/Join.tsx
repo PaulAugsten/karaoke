@@ -2,13 +2,17 @@
 
 import { type SubmitEvent, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
+import { Panel } from '@/components/Panel';
+import { RoomCode } from '@/components/RoomCode';
+import { RoomCodeInput } from '@/components/RoomCodeInput';
+import { Wordmark } from '@/components/Wordmark';
 import { describeError } from '@/lib/describeError';
 import { joinSession, type Session } from './joinConnection';
 import { LiveQueue } from './LiveQueue';
 import { SongSearch } from './SongSearch';
 
 const NAME_KEY = 'karaoke:singer-name';
-const INPUT_CLASS = 'rounded-lg border border-field bg-background px-3 py-2 text-lg';
+const LABEL_CLASS = 'font-bold text-muted text-xs uppercase tracking-widest';
 
 function readSavedName(): string {
     try {
@@ -59,11 +63,15 @@ export function Join({ initialCode }: { initialCode: string }) {
 
     if (session) {
         return (
-            <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-8 p-4">
-                <h1 className="font-display font-extrabold text-xl">
-                    Room{' '}
-                    <span className="font-mono text-highlight tracking-widest">{session.code}</span>
-                </h1>
+            <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-4 py-3">
+                <header className="flex items-center justify-between gap-3">
+                    <span className="text-xl">
+                        <Wordmark />
+                    </span>
+                    <h1 className="flex items-center gap-2">
+                        <span className={LABEL_CLASS}>Room</span> <RoomCode code={session.code} />
+                    </h1>
+                </header>
                 <SongSearch roomCode={session.code} />
                 <LiveQueue
                     sessionId={session.id}
@@ -77,37 +85,39 @@ export function Join({ initialCode }: { initialCode: string }) {
     }
 
     return (
-        <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 p-4">
-            <h1 className="font-display font-extrabold text-2xl">Join the karaoke</h1>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <label className="flex flex-col gap-1">
-                    <span className="text-muted text-sm">Room code</span>
-                    <input
-                        name="code"
-                        defaultValue={initialCode}
-                        required
-                        maxLength={4}
-                        autoCapitalize="characters"
-                        autoComplete="off"
-                        spellCheck={false}
-                        className={`${INPUT_CLASS} font-mono uppercase tracking-widest`}
-                    />
-                </label>
-                <label className="flex flex-col gap-1">
-                    <span className="text-muted text-sm">Your name</span>
+        <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-4 py-3">
+            <p className="text-xl">
+                <Wordmark />
+            </p>
+            <header>
+                <h1 className="font-display font-extrabold text-3xl">Almost in.</h1>
+                <p className="mt-1 text-muted">Your name shows next to your songs on the TV.</p>
+            </header>
+            <Panel>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                    <label htmlFor="join-code" className={LABEL_CLASS}>
+                        Room code
+                    </label>
+                    <RoomCodeInput id="join-code" name="code" defaultValue={initialCode} required />
+                    <label htmlFor="join-name" className={LABEL_CLASS}>
+                        Your name
+                    </label>
                     <input
                         ref={nameInput}
+                        id="join-name"
                         name="name"
                         required
                         maxLength={30}
                         autoComplete="nickname"
-                        className={INPUT_CLASS}
+                        // biome-ignore lint/a11y/noAutofocus: with the code already filled in, the name is the only thing left to type
+                        autoFocus={initialCode !== ''}
+                        className="rounded-xl border border-field bg-background px-3 py-3 text-lg"
                     />
-                </label>
-                <Button type="submit" disabled={busy}>
-                    {busy ? 'Joining...' : 'Join'}
-                </Button>
-            </form>
+                    <Button type="submit" disabled={busy}>
+                        {busy ? 'Joining...' : 'Join the room'}
+                    </Button>
+                </form>
+            </Panel>
             {error && (
                 <p role="alert" className="text-danger">
                     {error}

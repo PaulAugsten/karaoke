@@ -14,6 +14,19 @@
     --color-highlight: #5ce1e6; /* cyan: room code, selected ring, "Added" */
     --color-danger: #ff6b6b;
     --color-danger-ink: #2a0707; /* text on danger fills */
+
+    /* The level bars next to "Now singing". */
+    --animate-level: level 1.1s ease-in-out infinite;
+
+    @keyframes level {
+        0%,
+        100% {
+            transform: scaleY(0.35);
+        }
+        50% {
+            transform: scaleY(1);
+        }
+    }
 }
 
 @theme inline {

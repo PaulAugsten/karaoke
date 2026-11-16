@@ -53,18 +53,22 @@ function useLiveQueue(sessionId: number, onEnded: () => void) {
 
 export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: () => void }) {
     const { queue, status, error } = useLiveQueue(sessionId, onEnded);
+    const waiting = queue?.filter((entry) => entry.status !== 'playing') ?? [];
+    const playing = queue?.find((entry) => entry.status === 'playing');
 
     return (
-        <section aria-labelledby="queue-heading" className="flex flex-col gap-3">
+        <section aria-labelledby="queue-heading" className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between">
                 <h2 id="queue-heading" className="font-display font-extrabold text-lg">
                     Queue
                 </h2>
-                {status !== 'SUBSCRIBED' && (
-                    <span className="text-muted text-sm">
-                        {status === 'CONNECTING' ? 'Connecting...' : 'Reconnecting...'}
-                    </span>
-                )}
+                <span className="font-bold text-muted text-xs uppercase tracking-widest">
+                    {status === 'SUBSCRIBED'
+                        ? queue && `${queue.length} ${queue.length === 1 ? 'song' : 'songs'}`
+                        : status === 'CONNECTING'
+                          ? 'Connecting...'
+                          : 'Reconnecting...'}
+                </span>
             </div>
             {error && (
                 <p role="alert" className="text-danger text-sm">
@@ -73,30 +77,52 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
             )}
             {queue === null && <p className="text-muted">Loading...</p>}
             {queue?.length === 0 && <p className="text-muted">The queue is empty. Add a song!</p>}
-            {queue && queue.length > 0 && (
+            {playing && (
+                <div className="rounded-xl border border-line border-l-4 border-l-accent bg-surface px-3 py-2">
+                    <span className="flex items-center gap-2 font-bold text-accent text-xs uppercase tracking-widest">
+                        <LevelBars />
+                        <span>Now singing</span>
+                    </span>
+                    <span className="block wrap-break-word font-bold">{playing.title}</span>
+                    <span className="block text-muted text-sm">{byline(playing)}</span>
+                </div>
+            )}
+            {waiting.length > 0 && (
                 <ol className="flex flex-col gap-2">
-                    {queue.map((entry) => (
+                    {waiting.map((entry, index) => (
                         <li
                             key={entry.id}
-                            className={
-                                entry.status === 'playing'
-                                    ? 'rounded-lg border border-line border-l-4 border-l-accent bg-surface px-3 py-2'
-                                    : 'rounded-lg border border-line px-3 py-2'
-                            }
+                            className="flex items-center gap-3 rounded-xl border border-line px-3 py-2"
                         >
-                            {entry.status === 'playing' && (
-                                <span className="block font-bold text-accent text-xs uppercase tracking-wide">
-                                    Now singing
-                                </span>
-                            )}
-                            <span className="block">{entry.title}</span>
-                            <span className="block text-muted text-sm">
-                                {[entry.artist, entry.singer].filter(Boolean).join(' · ')}
+                            <span
+                                aria-hidden="true"
+                                className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line font-bold text-muted text-xs"
+                            >
+                                {index + 1}
+                            </span>
+                            <span className="min-w-0 wrap-break-word">
+                                <span className="block">{entry.title}</span>
+                                <span className="block text-muted text-sm">{byline(entry)}</span>
                             </span>
                         </li>
                     ))}
                 </ol>
             )}
         </section>
+    );
+}
+
+function byline(entry: QueueEntry): string {
+    return [entry.artist, entry.singer].filter(Boolean).join(' · ');
+}
+
+/** Three small bars that bounce like a level meter. They stand still for reduced motion. */
+function LevelBars() {
+    return (
+        <span aria-hidden="true" className="flex h-3 items-end gap-0.5">
+            <span className="h-full w-0.5 origin-bottom animate-level rounded-full bg-accent motion-reduce:animate-none" />
+            <span className="h-full w-0.5 origin-bottom animate-level rounded-full bg-accent [animation-delay:-0.4s] motion-reduce:animate-none" />
+            <span className="h-full w-0.5 origin-bottom animate-level rounded-full bg-accent [animation-delay:-0.7s] motion-reduce:animate-none" />
+        </span>
     );
 }
