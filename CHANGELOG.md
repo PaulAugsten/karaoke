@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/[secure]/karaoke/compare/v1.7.0...v1.7.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* room code input follows cursor sideways ([#24](https://github.com/[secure]/karaoke/issues/24)) ([f539042](https://github.com/[secure]/karaoke/commit/f5390427d01dc6eca71a8a2426f9374bd64a167b))
+
 # [1.7.0](https://github.com/[secure]/karaoke/compare/v1.6.0...v1.7.0) (2026-11-16)
 
 
