@@ -17,7 +17,7 @@ export function RoomCodeInput({ defaultValue = '', onChange, ...props }: RoomCod
     const active = Math.min(length, LENGTH - 1);
 
     return (
-        <span className="@container relative grid h-14 grid-cols-4 gap-2 overflow-hidden">
+        <span className="@container relative grid h-14 grid-cols-4 gap-2 overflow-clip">
             <input
                 {...props}
                 defaultValue={initial}
