@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/[secure]/karaoke/compare/v1.8.0...v1.9.0) (2026-11-16)
+
+
+### Features
+
+* stage idle screen with QR code, fading controls and remote pause ([#26](https://github.com/[secure]/karaoke/issues/26)) ([efb8203](https://github.com/[secure]/karaoke/commit/efb8203ced18b386e178063c295bcff3edceb15e))
+
 # [1.8.0](https://github.com/[secure]/karaoke/compare/v1.7.1...v1.8.0) (2026-11-16)
 
 
