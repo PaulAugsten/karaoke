@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 // Add every public page here as it's created.
-const pages = ['/'];
+const pages = ['/', 'join'];
 
 for (const path of pages) {
     test(`no WCAG violations on ${path}`, async ({ page }) => {
