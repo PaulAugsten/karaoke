@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/[secure]/karaoke/compare/v1.7.1...v1.8.0) (2026-11-16)
+
+
+### Features
+
+* redesign of join page ([#25](https://github.com/[secure]/karaoke/issues/25)) ([afaf071](https://github.com/[secure]/karaoke/commit/afaf0712ed36999d1fd0c714e6ec491d211d5441))
+
 ## [1.7.1](https://github.com/[secure]/karaoke/compare/v1.7.0...v1.7.1) (2026-11-16)
 
 
