@@ -7,10 +7,13 @@ import {
     closeRoom,
     createSession,
     endSession,
+    fetchQueue,
+    findOpenSession,
     notifyChange,
     reportUnplayable,
     resetFakeConnection,
     SESSION,
+    subscribeToQueue,
 } from './fakeStageConnection';
 import { installFakeYouTube, latestPlayer, resetFakeYouTube } from './fakeYouTube';
 
@@ -29,6 +32,14 @@ function clickButton(name: string) {
     fireEvent.click(screen.getByRole('button', { name }));
 }
 
+function press(key: string) {
+    fireEvent.keyDown(document.activeElement ?? document.body, { key });
+}
+
+function corner() {
+    return screen.getByRole('button', { name: 'End party' }).parentElement!;
+}
+
 /** Renders the stage, presses Start and waits until the first video loads. */
 async function startedStage() {
     const player = await renderReadyStage();
@@ -44,6 +55,7 @@ describe('Stage', () => {
         resetFakeConnection();
         vi.clearAllMocks();
         vi.restoreAllMocks();
+        vi.useRealTimers();
         window.history.replaceState(null, '', '/');
     });
 
@@ -267,6 +279,59 @@ describe('Stage', () => {
         expect(screen.getByRole('button', { name: 'End party' })).toBeInTheDocument();
     });
 
+    it('offers a new room when the room in the URL has ended', async () => {
+        window.history.replaceState(null, '', '/stage?room=ZZZZ');
+        await renderReadyStage();
+
+        await act(async () => {
+            await findOpenSession.mock.results[0]?.value;
+        });
+
+        expect(findOpenSession).toHaveBeenCalledWith('ZZZZ');
+        expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    });
+
+    it('shows an error when the room in the URL cannot be looked up', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        findOpenSession.mockRejectedValueOnce(new Error('network down'));
+        window.history.replaceState(null, '', `/stage?room=${SESSION.code}`);
+        await renderReadyStage();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+        expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    });
+
+    it('shows an error when the queue cannot be loaded', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        fetchQueue.mockRejectedValueOnce(new Error('network down'));
+        await renderReadyStage();
+
+        clickButton('Start');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+    });
+
+    it('loads the queue again when the TV comes back on, not when it goes off', async () => {
+        const visibility = vi.spyOn(document, 'visibilityState', 'get');
+        const player = await renderReadyStage();
+        clickButton('Start');
+        await screen.findByRole('heading', { name: "Who's singing first?" });
+        addEntry(FIRST);
+
+        visibility.mockReturnValue('hidden');
+        act(() => {
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await act(async () => {});
+        expect(player.loadVideoById).not.toHaveBeenCalled();
+
+        visibility.mockReturnValue('visible');
+        act(() => {
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await waitFor(() => expect(player.loadVideoById).toHaveBeenCalledWith(FIRST));
+    });
+
     it('goes back to Start when the room was ended elsewhere', async () => {
         addEntry(FIRST);
         const player = await startedStage();
@@ -276,5 +341,267 @@ describe('Stage', () => {
 
         await screen.findByRole('button', { name: 'Start' });
         expect(player.stopVideo).toHaveBeenCalled();
+    });
+
+    describe('idle screen', () => {
+        it('shows how to join while the queue is empty', async () => {
+            await renderReadyStage();
+            clickButton('Start');
+
+            expect(
+                await screen.findByRole('heading', { name: "Who's singing first?" }),
+            ).toBeInTheDocument();
+            expect(
+                screen.getByRole('img', { name: 'QR code to join this room' }),
+            ).toBeInTheDocument();
+            expect(screen.getByText(SESSION.code)).toBeInTheDocument();
+            expect(screen.getByText(window.location.host)).toBeInTheDocument();
+            // The corner badge would only repeat the big code.
+            expect(screen.queryByText('Room')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
+        });
+
+        it('gets out of the way when a song is added', async () => {
+            const player = await renderReadyStage();
+            clickButton('Start');
+            await screen.findByRole('heading', { name: "Who's singing first?" });
+
+            addEntry(FIRST);
+            act(() => notifyChange());
+
+            await waitFor(() => expect(player.loadVideoById).toHaveBeenCalledWith(FIRST));
+            expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+            expect(screen.getByText('Room')).toBeInTheDocument();
+        });
+
+        it('comes back asking who is next once the queue runs out', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+
+            act(() => player.stateChange(YT.PlayerState.ENDED));
+
+            expect(await screen.findByRole('heading', { name: "Who's next?" })).toBeInTheDocument();
+        });
+
+        it('does not show before the queue has loaded', async () => {
+            addEntry(FIRST);
+            const player = await renderReadyStage();
+
+            clickButton('Start');
+            await screen.findByText(SESSION.code);
+            expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+
+            await waitFor(() => expect(player.loadVideoById).toHaveBeenCalledWith(FIRST));
+            expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+        });
+
+        it('does not show between two songs', async () => {
+            addEntry(FIRST);
+            addEntry(SECOND);
+            const player = await startedStage();
+
+            act(() => player.stateChange(YT.PlayerState.ENDED));
+            expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+
+            await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+            expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+        });
+
+        it('says when the live connection is lost, on the idle screen too', async () => {
+            subscribeToQueue.mockImplementationOnce((_sessionId, onChange, onStatus) => {
+                onStatus('CHANNEL_ERROR');
+                onChange();
+                return () => {};
+            });
+            await renderReadyStage();
+            clickButton('Start');
+
+            await screen.findByRole('heading', { name: "Who's singing first?" });
+
+            expect(screen.getByText('Reconnecting...')).toBeInTheDocument();
+        });
+
+        it('shows the room code next to Resume after a reload', async () => {
+            window.history.replaceState(null, '', `/stage?room=${SESSION.code}`);
+            await renderReadyStage();
+
+            await screen.findByRole('button', { name: 'Resume' });
+
+            expect(screen.getByText(SESSION.code)).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Resume' })).toHaveFocus();
+        });
+    });
+
+    describe('remote', () => {
+        it('pauses and resumes the song with OK', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+
+            press('Enter');
+            expect(player.pauseVideo).toHaveBeenCalledTimes(1);
+            act(() => player.stateChange(YT.PlayerState.PAUSED));
+            expect(screen.getByText('Paused · press OK to resume')).toBeInTheDocument();
+
+            press('Enter');
+            expect(player.playVideo).toHaveBeenCalledTimes(1);
+            act(() => player.stateChange(YT.PlayerState.PLAYING));
+            expect(screen.queryByText('Paused · press OK to resume')).not.toBeInTheDocument();
+        });
+
+        it('also pauses with the play/pause key', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+
+            press('MediaPlayPause');
+
+            expect(player.pauseVideo).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores OK while no song is playing', async () => {
+            const player = await renderReadyStage();
+            clickButton('Start');
+            await screen.findByRole('heading', { name: "Who's singing first?" });
+
+            press('Enter');
+
+            expect(player.pauseVideo).not.toHaveBeenCalled();
+            expect(player.playVideo).not.toHaveBeenCalled();
+        });
+
+        it('selects End party with Up, after which OK belongs to the button', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+            expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
+
+            press('ArrowUp');
+            expect(screen.getByRole('button', { name: 'End party' })).toHaveFocus();
+
+            press('Enter');
+            expect(player.pauseVideo).not.toHaveBeenCalled();
+        });
+
+        it('deselects with Down, so OK pauses again', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+            press('ArrowUp');
+
+            press('ArrowDown');
+            expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
+
+            press('Enter');
+            expect(player.pauseVideo).toHaveBeenCalledTimes(1);
+        });
+
+        it('moves between the two buttons of the confirmation', async () => {
+            addEntry(FIRST);
+            await startedStage();
+            clickButton('End party');
+            const keep = screen.getByRole('button', { name: 'Keep singing' });
+            const end = screen.getByRole('button', { name: 'End party' });
+            expect(keep).toHaveFocus();
+
+            press('ArrowRight');
+            expect(end).toHaveFocus();
+            press('ArrowRight');
+            expect(keep).toHaveFocus();
+            press('ArrowLeft');
+            expect(end).toHaveFocus();
+        });
+
+        it('leaves the selection alone on Up while a button is selected', async () => {
+            addEntry(FIRST);
+            await startedStage();
+            clickButton('End party');
+            const keep = screen.getByRole('button', { name: 'Keep singing' });
+
+            press('ArrowUp');
+
+            expect(keep).toHaveFocus();
+        });
+
+        it('closes the confirmation with Back', async () => {
+            addEntry(FIRST);
+            await startedStage();
+            clickButton('End party');
+
+            press('Escape');
+
+            expect(screen.queryByRole('button', { name: 'Keep singing' })).not.toBeInTheDocument();
+            expect(endSession).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('fading corner controls', () => {
+        it('fades five seconds after the last press and deselects End party', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+            vi.useFakeTimers();
+            act(() => player.stateChange(YT.PlayerState.PLAYING));
+            press('ArrowUp');
+
+            act(() => vi.advanceTimersByTime(4999));
+            expect(corner()).not.toHaveClass('opacity-20');
+            expect(screen.getByRole('button', { name: 'End party' })).toHaveFocus();
+
+            act(() => vi.advanceTimersByTime(1));
+            expect(corner()).toHaveClass('opacity-20');
+            expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
+
+            press('ArrowDown');
+            expect(corner()).not.toHaveClass('opacity-20');
+        });
+
+        it('stays lit while the song is paused', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+            vi.useFakeTimers();
+            act(() => player.stateChange(YT.PlayerState.PLAYING));
+            act(() => player.stateChange(YT.PlayerState.PAUSED));
+
+            act(() => vi.advanceTimersByTime(5000));
+
+            expect(corner()).not.toHaveClass('opacity-20');
+        });
+
+        it('stays lit on the idle screen but still deselects', async () => {
+            await renderReadyStage();
+            clickButton('Start');
+            await screen.findByRole('heading', { name: "Who's singing first?" });
+            vi.useFakeTimers();
+            press('ArrowUp');
+
+            act(() => vi.advanceTimersByTime(5000));
+
+            expect(corner()).not.toHaveClass('opacity-20');
+            expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
+        });
+
+        it('drops the confirmation when the controls fade', async () => {
+            addEntry(FIRST);
+            await startedStage();
+            vi.useFakeTimers();
+            press('ArrowUp');
+            clickButton('End party');
+            expect(screen.getByRole('button', { name: 'Keep singing' })).toBeInTheDocument();
+
+            act(() => vi.advanceTimersByTime(5000));
+
+            expect(screen.queryByRole('button', { name: 'Keep singing' })).not.toBeInTheDocument();
+            expect(endSession).not.toHaveBeenCalled();
+        });
+
+        it('leaves Start selected after the party ended', async () => {
+            addEntry(FIRST);
+            await startedStage();
+            vi.useFakeTimers({ shouldAdvanceTime: true });
+            press('ArrowUp');
+            clickButton('End party');
+            clickButton('End party');
+            const startButton = await screen.findByRole('button', { name: 'Start' });
+
+            act(() => vi.advanceTimersByTime(5000));
+
+            expect(startButton).toHaveFocus();
+        });
     });
 });
