@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { buttonClass } from '@/components/Button';
+import { buttonClass } from '@/components/buttonClass';
 
 export default function Home() {
     return (

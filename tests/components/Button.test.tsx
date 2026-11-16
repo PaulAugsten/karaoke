@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Button, buttonClass } from '@/components/Button';
+import { Button } from '@/components/Button';
+import { buttonClass } from '@/components/buttonClass';
 
 describe('Button', () => {
     it('is a plain button with the accent fill by default', () => {
