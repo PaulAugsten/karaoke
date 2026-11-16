@@ -6,6 +6,8 @@ export class FakePlayer {
 
     loadVideoById = vi.fn();
     stopVideo = vi.fn();
+    pauseVideo = vi.fn();
+    playVideo = vi.fn();
     unMute = vi.fn();
     destroy = vi.fn();
     getCurrentTime = vi.fn(() => 0);

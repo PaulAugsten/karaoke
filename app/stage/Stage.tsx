@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
+import { RoomCode } from '@/components/RoomCode';
+import { Wordmark } from '@/components/Wordmark';
 import { describeError } from '@/lib/describeError';
+import { IdleScreen } from './IdleScreen';
 import {
     advanceQueue,
     type ConnectionStatus,
@@ -21,24 +24,41 @@ import { useYouTubePlayer } from './useYouTubePlayer';
 import { isPermanentError } from './youtubeErrors';
 
 const ROOM_PARAM = 'room';
+const AWAKE_MS = 5000;
+const CORNER_CLASS = 'fixed top-6 transition-opacity duration-700';
 
 export function Stage() {
     const [session, setSession] = useState<Session | null>(null);
-    const [queue, setQueue] = useState<QueueItem[]>([]);
+    const [queue, setQueue] = useState<QueueItem[] | null>(null);
     const [refreshCount, setRefreshCount] = useState(0);
     const [status, setStatus] = useState<ConnectionStatus>('CONNECTING');
     const [started, setStarted] = useState(false);
     const [confirmingEnd, setConfirmingEnd] = useState(false);
+    const [paused, setPaused] = useState(false);
+    const [hasPlayed, setHasPlayed] = useState(false);
+    const [awake, setAwake] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const loadedEntryId = useRef<number | null>(null);
     const advancing = useRef(false);
+    const sleepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const corner = useRef<HTMLDivElement>(null);
+    const endButton = useRef<HTMLButtonElement>(null);
 
-    const playing = queue.find((item) => item.status === 'playing') ?? null;
-    const hasQueued = queue.some((item) => item.status === 'queued');
+    const playing = queue?.find((item) => item.status === 'playing') ?? null;
+    const hasQueued = queue?.some((item) => item.status === 'queued') ?? false;
+    const inRoom = started && session !== null;
+
+    const idle = inRoom && queue !== null && !playing && !hasQueued;
+    const faint = !awake && playing !== null && !paused;
 
     const { containerRef, player, ready } = useYouTubePlayer({
         onStateChange: (state) => {
             if (state === YT.PlayerState.ENDED) advance('completed');
+            if (state === YT.PlayerState.PAUSED) setPaused(true);
+            if (state === YT.PlayerState.PLAYING) {
+                setPaused(false);
+                wake(); // a new song shows the corner controls for a moment
+            }
         },
         onError: (code) => {
             if (playing && isPermanentError(code)) {
@@ -48,14 +68,39 @@ export function Stage() {
         },
     });
 
+    /** Lights the corner controls and lets them fade again after a while without a press. */
+    function wake() {
+        setAwake(true);
+        if (sleepTimer.current) clearTimeout(sleepTimer.current);
+        sleepTimer.current = setTimeout(() => {
+            setAwake(false);
+            setConfirmingEnd(false);
+            deselect();
+        }, AWAKE_MS);
+    }
+
+    /** Takes the remote off whatever button it was on, so OK means pause again. */
+    function deselect() {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    }
+
+    function togglePause() {
+        if (paused) player.current?.playVideo();
+        else player.current?.pauseVideo();
+    }
+
     function leaveRoom() {
         player.current?.stopVideo();
         loadedEntryId.current = null;
+        if (sleepTimer.current) clearTimeout(sleepTimer.current);
         window.history.replaceState(null, '', window.location.pathname);
         setSession(null);
-        setQueue([]);
+        setQueue(null);
         setStarted(false);
         setConfirmingEnd(false);
+        setPaused(false);
+        setHasPlayed(false);
+        setAwake(true);
     }
 
     async function endParty() {
@@ -84,6 +129,7 @@ export function Stage() {
                       secondsPlayed: Math.round(player.current?.getCurrentTime() ?? 0),
                   }
                 : null;
+        if (finished) setHasPlayed(true);
         advanceQueue(session.id, finished)
             .then(() => setRefreshCount((n) => n + 1))
             .catch(showError)
@@ -91,6 +137,66 @@ export function Stage() {
                 advancing.current = false;
             });
     }
+
+    /** The remote. */
+    const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+        wake();
+        const focused = document.activeElement;
+        const onButton = focused instanceof HTMLButtonElement;
+        switch (event.key) {
+            case 'Enter':
+            case ' ':
+                if (onButton || !playing) return; // a selected button gets the press
+                togglePause();
+                break;
+            case 'MediaPlayPause':
+                if (!playing) return;
+                togglePause();
+                break;
+            case 'ArrowUp':
+                if (!onButton) endButton.current?.focus();
+                break;
+            case 'ArrowLeft':
+            case 'ArrowRight': {
+                const buttons = [...(corner.current?.querySelectorAll('button') ?? [])];
+                const index = buttons.indexOf(focused as HTMLButtonElement);
+                if (index === -1) return;
+                const step = event.key === 'ArrowRight' ? 1 : buttons.length - 1;
+                buttons[(index + step) % buttons.length]?.focus();
+                break;
+            }
+            case 'ArrowDown':
+            case 'Escape':
+                setConfirmingEnd(false);
+                deselect();
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+    });
+
+    const onPointerMove = useEffectEvent(() => wake());
+
+    // Listen to the remote (and a mouse, on a laptop) while a room is open.
+    useEffect(() => {
+        if (!inRoom) return;
+        const keyDown = (event: KeyboardEvent) => onKeyDown(event);
+        const pointerMove = () => onPointerMove();
+        document.addEventListener('keydown', keyDown);
+        document.addEventListener('pointermove', pointerMove);
+        return () => {
+            document.removeEventListener('keydown', keyDown);
+            document.removeEventListener('pointermove', pointerMove);
+        };
+    }, [inRoom]);
+
+    useEffect(
+        () => () => {
+            if (sleepTimer.current) clearTimeout(sleepTimer.current);
+        },
+        [],
+    );
 
     // After a reload join the session named in the URL.
     useEffect(() => {
@@ -172,22 +278,25 @@ export function Stage() {
 
     return (
         <>
-            <div ref={containerRef} style={{ position: 'fixed', inset: 0 }} />
-            {session && (
-                <div className="fixed top-6 right-6 rounded-xl border border-line bg-background/80 px-6 py-3">
-                    <span className="font-mono text-4xl text-highlight tracking-widest">
-                        {session.code}
-                    </span>
-                    {status !== 'SUBSCRIBED' && (
-                        <span className="block text-muted text-sm">{status}</span>
-                    )}
-                </div>
+            <div ref={containerRef} className="fixed inset-0" />
+            <div className="fixed inset-0" />
+
+            {idle && session && (
+                <IdleScreen
+                    code={session.code}
+                    headline={hasPlayed ? "Who's next?" : "Who's singing first?"}
+                />
             )}
+
             {started && session && (
-                <div className="fixed top-6 left-6 flex gap-3 text-xl">
+                <div
+                    ref={corner}
+                    className={`${CORNER_CLASS} left-6 flex gap-3 ${faint ? 'opacity-20' : ''}`}
+                >
                     {confirmingEnd ? (
                         <>
                             <Button
+                                key="keep"
                                 variant="outline"
                                 size="lg"
                                 autoFocus
@@ -195,17 +304,73 @@ export function Stage() {
                             >
                                 Keep singing
                             </Button>
-                            <Button variant="danger" size="lg" onClick={endParty}>
+                            <Button key="confirm" variant="danger" size="lg" onClick={endParty}>
                                 End party
                             </Button>
                         </>
                     ) : (
-                        <Button variant="outline" size="lg" onClick={() => setConfirmingEnd(true)}>
+                        <Button
+                            key="end"
+                            ref={endButton}
+                            variant="outline"
+                            size="lg"
+                            onClick={() => setConfirmingEnd(true)}
+                        >
                             End party
                         </Button>
                     )}
                 </div>
             )}
+
+            {started && session && (!idle || status !== 'SUBSCRIBED') && (
+                <div
+                    className={`${CORNER_CLASS} right-6 flex items-center gap-3 rounded-xl border border-line bg-background/80 px-4 py-3 ${faint ? 'opacity-20' : ''}`}
+                >
+                    {!idle && (
+                        <>
+                            <span className="font-bold text-muted text-xs uppercase tracking-widest">
+                                Room
+                            </span>
+                            <RoomCode code={session.code} />
+                        </>
+                    )}
+                    {status !== 'SUBSCRIBED' && (
+                        <span className="text-muted text-sm">
+                            {status === 'CONNECTING' ? 'Connecting...' : 'Reconnecting...'}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {paused && playing && (
+                <p className="fixed top-6 left-1/2 -translate-x-1/2 rounded-full border border-line bg-background/80 px-5 py-2 font-bold text-sm uppercase tracking-widest">
+                    Paused · press OK to resume
+                </p>
+            )}
+
+            {!started && (
+                <div className="fixed inset-0 flex flex-col items-center justify-center gap-8 bg-background">
+                    <h1 className="text-7xl">
+                        <Wordmark />
+                    </h1>
+                    {session && <RoomCode code={session.code} size="lg" />}
+                    <Button
+                        size="xl"
+                        autoFocus
+                        aria-disabled={!ready}
+                        onClick={start}
+                        className="min-w-64"
+                    >
+                        {!ready ? 'Loading...' : session ? 'Resume' : 'Start'}
+                    </Button>
+                    <p className="text-muted text-xl">
+                        {session
+                            ? 'Press OK on the remote to carry on'
+                            : 'Press OK on the remote to open a room'}
+                    </p>
+                </div>
+            )}
+
             {error && (
                 <p
                     role="alert"
@@ -213,17 +378,6 @@ export function Stage() {
                 >
                     {error}
                 </p>
-            )}
-            {!started && (
-                <Button
-                    size="xl"
-                    autoFocus
-                    aria-disabled={!ready}
-                    onClick={start}
-                    className="fixed inset-0 m-auto h-24 w-64"
-                >
-                    {!ready ? 'Loading...' : session ? 'Resume' : 'Start'}
-                </Button>
             )}
         </>
     );
