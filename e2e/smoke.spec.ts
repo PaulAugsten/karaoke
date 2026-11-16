@@ -13,6 +13,13 @@ test('a room code typed on the homepage is carried to the join page', async ({ p
     await expect(page.getByLabel('Room code')).toHaveValue('KXQM');
 });
 
+test('the room code boxes stay in place once the code is complete', async ({ page }) => {
+    await page.goto('/');
+    const field = page.getByLabel('Room code');
+    await field.pressSequentially('KXQM');
+    expect(await field.evaluate((input) => input.parentElement?.scrollLeft)).toBe(0);
+});
+
 test('health endpoint reaches the database', async ({ request }) => {
     const response = await request.get('/api/health');
     expect(response.status()).toBe(200);
