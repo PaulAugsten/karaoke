@@ -1,6 +1,19 @@
 import { QRCodeSVG } from 'qrcode.react';
+import { useSyncExternalStore } from 'react';
 import { RoomCode } from '@/components/RoomCode';
 import { Wordmark } from '@/components/Wordmark';
+
+// The address never changes while the page is open, so there is nothing to subscribe to.
+const subscribe = () => () => {};
+
+/** The page's origin, or null while rendering on the server. */
+function useOrigin(): string | null {
+    return useSyncExternalStore(
+        subscribe,
+        () => window.location.origin,
+        () => null,
+    );
+}
 
 const NUMBER_CLASS =
     'flex size-9 shrink-0 items-center justify-center rounded-full border border-line font-bold text-highlight text-lg';
@@ -10,8 +23,10 @@ const NUMBER_CLASS =
  * as a room code. It covers the player, so a stopped video never shows through.
  */
 export function IdleScreen({ code, headline }: { code: string; headline: string }) {
-    // Only ever rendered after a button press, so `window` is always there.
-    const { origin, host } = window.location;
+    const origin = useOrigin();
+    // Only ever shown after a button press, so this is for the server render alone.
+    if (!origin) return null;
+    const { host } = new URL(origin);
 
     // The extra room at the top (pt-28) is for the "End party" button in the corner.
     return (

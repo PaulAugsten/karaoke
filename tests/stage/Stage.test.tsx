@@ -7,6 +7,8 @@ import {
     closeRoom,
     createSession,
     endSession,
+    fetchQueue,
+    findOpenSession,
     notifyChange,
     reportUnplayable,
     resetFakeConnection,
@@ -277,6 +279,59 @@ describe('Stage', () => {
         expect(screen.getByRole('button', { name: 'End party' })).toBeInTheDocument();
     });
 
+    it('offers a new room when the room in the URL has ended', async () => {
+        window.history.replaceState(null, '', '/stage?room=ZZZZ');
+        await renderReadyStage();
+
+        await act(async () => {
+            await findOpenSession.mock.results[0]?.value;
+        });
+
+        expect(findOpenSession).toHaveBeenCalledWith('ZZZZ');
+        expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    });
+
+    it('shows an error when the room in the URL cannot be looked up', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        findOpenSession.mockRejectedValueOnce(new Error('network down'));
+        window.history.replaceState(null, '', `/stage?room=${SESSION.code}`);
+        await renderReadyStage();
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+        expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
+    });
+
+    it('shows an error when the queue cannot be loaded', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        fetchQueue.mockRejectedValueOnce(new Error('network down'));
+        await renderReadyStage();
+
+        clickButton('Start');
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('network down');
+    });
+
+    it('loads the queue again when the TV comes back on, not when it goes off', async () => {
+        const visibility = vi.spyOn(document, 'visibilityState', 'get');
+        const player = await renderReadyStage();
+        clickButton('Start');
+        await screen.findByRole('heading', { name: "Who's singing first?" });
+        addEntry(FIRST);
+
+        visibility.mockReturnValue('hidden');
+        act(() => {
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await act(async () => {});
+        expect(player.loadVideoById).not.toHaveBeenCalled();
+
+        visibility.mockReturnValue('visible');
+        act(() => {
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await waitFor(() => expect(player.loadVideoById).toHaveBeenCalledWith(FIRST));
+    });
+
     it('goes back to Start when the room was ended elsewhere', async () => {
         addEntry(FIRST);
         const player = await startedStage();
@@ -451,6 +506,17 @@ describe('Stage', () => {
             expect(keep).toHaveFocus();
             press('ArrowLeft');
             expect(end).toHaveFocus();
+        });
+
+        it('leaves the selection alone on Up while a button is selected', async () => {
+            addEntry(FIRST);
+            await startedStage();
+            clickButton('End party');
+            const keep = screen.getByRole('button', { name: 'Keep singing' });
+
+            press('ArrowUp');
+
+            expect(keep).toHaveFocus();
         });
 
         it('closes the confirmation with Back', async () => {

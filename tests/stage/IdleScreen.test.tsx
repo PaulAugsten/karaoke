@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { IdleScreen } from '@/app/stage/IdleScreen';
 
@@ -28,5 +29,9 @@ describe('IdleScreen', () => {
         expect(screen.getByText(window.location.host)).toBeInTheDocument();
         expect(screen.getByText('KXQM')).toBeInTheDocument();
         expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    });
+
+    it('renders nothing on the server, where the address is unknown', () => {
+        expect(renderToString(<IdleScreen code="KXQM" headline="Who's next?" />)).toBe('');
     });
 });
