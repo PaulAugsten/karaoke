@@ -1,13 +1,14 @@
 'use client';
 
 import { type SubmitEvent, useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/Button';
 import { describeError } from '@/lib/describeError';
 import { joinSession, type Session } from './joinConnection';
 import { LiveQueue } from './LiveQueue';
 import { SongSearch } from './SongSearch';
 
 const NAME_KEY = 'karaoke:singer-name';
-const INPUT_CLASS = 'rounded-lg border border-muted/40 bg-transparent px-3 py-2 text-lg';
+const INPUT_CLASS = 'rounded-lg border border-field bg-background px-3 py-2 text-lg';
 
 function readSavedName(): string {
     try {
@@ -59,8 +60,9 @@ export function Join({ initialCode }: { initialCode: string }) {
     if (session) {
         return (
             <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-8 p-4">
-                <h1 className="font-semibold text-xl">
-                    Room <span className="font-mono tracking-widest">{session.code}</span>
+                <h1 className="font-display font-extrabold text-xl">
+                    Room{' '}
+                    <span className="font-mono text-highlight tracking-widest">{session.code}</span>
                 </h1>
                 <SongSearch roomCode={session.code} />
                 <LiveQueue
@@ -76,7 +78,7 @@ export function Join({ initialCode }: { initialCode: string }) {
 
     return (
         <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 p-4">
-            <h1 className="font-semibold text-2xl">Join the karaoke</h1>
+            <h1 className="font-display font-extrabold text-2xl">Join the karaoke</h1>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <label className="flex flex-col gap-1">
                     <span className="text-muted text-sm">Room code</span>
@@ -102,16 +104,12 @@ export function Join({ initialCode }: { initialCode: string }) {
                         className={INPUT_CLASS}
                     />
                 </label>
-                <button
-                    type="submit"
-                    disabled={busy}
-                    className="rounded-lg bg-foreground px-4 py-3 text-lg text-surface disabled:opacity-50"
-                >
+                <Button type="submit" disabled={busy}>
                     {busy ? 'Joining...' : 'Join'}
-                </button>
+                </Button>
             </form>
             {error && (
-                <p role="alert" className="text-red-600">
+                <p role="alert" className="text-danger">
                     {error}
                 </p>
             )}

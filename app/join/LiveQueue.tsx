@@ -57,17 +57,17 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
     return (
         <section aria-labelledby="queue-heading" className="flex flex-col gap-3">
             <div className="flex items-baseline justify-between">
-                <h2 id="queue-heading" className="font-semibold text-lg">
+                <h2 id="queue-heading" className="font-display font-extrabold text-lg">
                     Queue
                 </h2>
                 {status !== 'SUBSCRIBED' && (
-                    <span className="text-sm text-yellow-600">
+                    <span className="text-muted text-sm">
                         {status === 'CONNECTING' ? 'Connecting...' : 'Reconnecting...'}
                     </span>
                 )}
             </div>
             {error && (
-                <p role="alert" className="text-red-600 text-sm">
+                <p role="alert" className="text-danger text-sm">
                     {error}
                 </p>
             )}
@@ -80,17 +80,17 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
                             key={entry.id}
                             className={
                                 entry.status === 'playing'
-                                    ? 'rounded-lg bg-foreground px-3 py-2 text-surface'
-                                    : 'rounded-lg border border-muted/30 px-3 py-2'
+                                    ? 'rounded-lg border border-line border-l-4 border-l-accent bg-surface px-3 py-2'
+                                    : 'rounded-lg border border-line px-3 py-2'
                             }
                         >
                             {entry.status === 'playing' && (
-                                <span className="block text-xs uppercase tracking-wide">
+                                <span className="block font-bold text-accent text-xs uppercase tracking-wide">
                                     Now singing
                                 </span>
                             )}
                             <span className="block">{entry.title}</span>
-                            <span className="block text-sm opacity-70">
+                            <span className="block text-muted text-sm">
                                 {[entry.artist, entry.singer].filter(Boolean).join(' · ')}
                             </span>
                         </li>

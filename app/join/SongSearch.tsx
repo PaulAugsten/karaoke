@@ -50,7 +50,7 @@ export function SongSearch({ roomCode }: { roomCode: string }) {
 
     return (
         <section aria-labelledby="search-heading" className="flex flex-col gap-3">
-            <h2 id="search-heading" className="font-semibold text-lg">
+            <h2 id="search-heading" className="font-display font-extrabold text-lg">
                 Add a song
             </h2>
             <input
@@ -60,16 +60,16 @@ export function SongSearch({ roomCode }: { roomCode: string }) {
                 enterKeyHint="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                className="rounded-lg border border-muted/40 bg-transparent px-3 py-2 text-lg"
+                className="rounded-lg border border-field bg-background px-3 py-2 text-lg"
             />
             {error && (
-                <p role="alert" className="text-red-600 text-sm">
+                <p role="alert" className="text-danger text-sm">
                     {error}
                 </p>
             )}
             {noMatches && <p className="text-muted">No songs found</p>}
             {results.length > 0 && (
-                <ul className="flex flex-col divide-y divide-muted/20">
+                <ul className="flex flex-col divide-y divide-line">
                     {results.map((result) => {
                         const added = addedIds.has(result.video_id);
                         return (
@@ -78,7 +78,7 @@ export function SongSearch({ roomCode }: { roomCode: string }) {
                                     type="button"
                                     disabled={added}
                                     onClick={() => add(result)}
-                                    className="flex w-full items-center justify-between gap-3 py-3 text-left disabled:opacity-60"
+                                    className="flex w-full items-center justify-between gap-3 py-3 text-left"
                                 >
                                     <span>
                                         <span className="block">{result.title}</span>
@@ -88,7 +88,9 @@ export function SongSearch({ roomCode }: { roomCode: string }) {
                                             </span>
                                         )}
                                     </span>
-                                    <span className="shrink-0 text-sm">
+                                    <span
+                                        className={`shrink-0 font-bold text-sm ${added ? 'text-highlight' : ''}`}
+                                    >
                                         {added ? 'Added' : 'Add'}
                                     </span>
                                 </button>
