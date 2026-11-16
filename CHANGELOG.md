@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/[secure]/karaoke/compare/v1.6.0...v1.7.0) (2026-11-16)
+
+
+### Features
+
+* improve home page UI ([#23](https://github.com/[secure]/karaoke/issues/23)) ([9965da4](https://github.com/[secure]/karaoke/commit/9965da4da19fdf3f794c79ab2c3197314f836c32))
+
 # [1.6.0](https://github.com/[secure]/karaoke/compare/v1.5.0...v1.6.0) (2026-11-16)
 
 
