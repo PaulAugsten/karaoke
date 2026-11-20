@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/[secure]/karaoke/compare/v1.9.0...v1.10.0) (2026-11-20)
+
+
+### Features
+
+* updated player stage with progress bar and skipping ([#28](https://github.com/[secure]/karaoke/issues/28)) ([85f9fbf](https://github.com/[secure]/karaoke/commit/85f9fbf8bd74ae1c3204f30d5bab3482f1165c64))
+
 # [1.9.0](https://github.com/[secure]/karaoke/compare/v1.8.0...v1.9.0) (2026-11-16)
 
 
