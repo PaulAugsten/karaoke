@@ -15,7 +15,7 @@ import {
     SESSION,
     subscribeToQueue,
 } from './fakeStageConnection';
-import { installFakeYouTube, latestPlayer, resetFakeYouTube } from './fakeYouTube';
+import { type FakePlayer, installFakeYouTube, latestPlayer, resetFakeYouTube } from './fakeYouTube';
 
 vi.mock('@/app/stage/stageConnection', () => import('./fakeStageConnection'));
 
@@ -40,11 +40,46 @@ function corner() {
     return screen.getByRole('button', { name: 'End party' }).parentElement!;
 }
 
+function bar() {
+    return progress().parentElement!;
+}
+
+function progress() {
+    return screen.getByRole('progressbar', { name: 'Song progress' });
+}
+
+function skipButton() {
+    return screen.getByRole('button', { name: 'Skip' });
+}
+
+/** Sets what the player answers when asked for its time, in seconds. */
+function setClock(player: FakePlayer, position: number, duration: number) {
+    player.getCurrentTime.mockReturnValue(position);
+    player.getDuration.mockReturnValue(duration);
+}
+
+/** Lets the stage read the player's time once. */
+function tick() {
+    act(() => vi.advanceTimersByTime(250));
+}
+
 /** Renders the stage, presses Start and waits until the first video loads. */
 async function startedStage() {
     const player = await renderReadyStage();
     clickButton('Start');
     await waitFor(() => expect(player.loadVideoById).toHaveBeenCalledWith(FIRST));
+    return player;
+}
+
+/**
+ * Like startedStage, then YouTube says the first song plays, with its clock as given. Timers
+ * are fake, but still run with real time so that waitFor works.
+ */
+async function playingStage(position: number, duration: number) {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const player = await startedStage();
+    setClock(player, position, duration);
+    act(() => player.stateChange(YT.PlayerState.PLAYING));
     return player;
 }
 
@@ -440,12 +475,13 @@ describe('Stage', () => {
             press('Enter');
             expect(player.pauseVideo).toHaveBeenCalledTimes(1);
             act(() => player.stateChange(YT.PlayerState.PAUSED));
-            expect(screen.getByText('Paused · press OK to resume')).toBeInTheDocument();
+            expect(screen.getByText('Paused')).toBeInTheDocument();
+            expect(screen.getByText('Press OK to resume')).toBeInTheDocument();
 
             press('Enter');
             expect(player.playVideo).toHaveBeenCalledTimes(1);
             act(() => player.stateChange(YT.PlayerState.PLAYING));
-            expect(screen.queryByText('Paused · press OK to resume')).not.toBeInTheDocument();
+            expect(screen.queryByText('Paused')).not.toBeInTheDocument();
         });
 
         it('also pauses with the play/pause key', async () => {
@@ -492,9 +528,9 @@ describe('Stage', () => {
             expect(player.pauseVideo).toHaveBeenCalledTimes(1);
         });
 
-        it('moves between the two buttons of the confirmation', async () => {
+        it('moves between the two buttons of the confirmation, without seeking', async () => {
             addEntry(FIRST);
-            await startedStage();
+            const player = await startedStage();
             clickButton('End party');
             const keep = screen.getByRole('button', { name: 'Keep singing' });
             const end = screen.getByRole('button', { name: 'End party' });
@@ -506,6 +542,7 @@ describe('Stage', () => {
             expect(keep).toHaveFocus();
             press('ArrowLeft');
             expect(end).toHaveFocus();
+            expect(player.seekTo).not.toHaveBeenCalled();
         });
 
         it('leaves the selection alone on Up while a button is selected', async () => {
@@ -531,8 +568,8 @@ describe('Stage', () => {
         });
     });
 
-    describe('fading corner controls', () => {
-        it('fades five seconds after the last press and deselects End party', async () => {
+    describe('controls during a song', () => {
+        it('hide five seconds after the last press and deselects End party', async () => {
             addEntry(FIRST);
             const player = await startedStage();
             vi.useFakeTimers();
@@ -540,18 +577,34 @@ describe('Stage', () => {
             press('ArrowUp');
 
             act(() => vi.advanceTimersByTime(4999));
-            expect(corner()).not.toHaveClass('opacity-20');
+            expect(corner()).not.toHaveClass('opacity-0');
+            expect(bar()).not.toHaveClass('opacity-0');
             expect(screen.getByRole('button', { name: 'End party' })).toHaveFocus();
 
             act(() => vi.advanceTimersByTime(1));
-            expect(corner()).toHaveClass('opacity-20');
+            expect(corner()).toHaveClass('opacity-0');
+            expect(bar()).toHaveClass('opacity-0');
             expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
 
-            press('ArrowDown');
-            expect(corner()).not.toHaveClass('opacity-20');
+            fireEvent.pointerMove(document);
+            expect(corner()).not.toHaveClass('opacity-0');
+            expect(bar()).not.toHaveClass('opacity-0');
         });
 
-        it('stays lit while the song is paused', async () => {
+        it('never hide the room code, so latecomers can still join', async () => {
+            addEntry(FIRST);
+            const player = await startedStage();
+            vi.useFakeTimers();
+            act(() => player.stateChange(YT.PlayerState.PLAYING));
+
+            act(() => vi.advanceTimersByTime(5000));
+
+            expect(corner()).toHaveClass('opacity-0');
+            expect(screen.getByText('Room').parentElement).not.toHaveClass('opacity-0');
+            expect(screen.getByText(SESSION.code)).toBeInTheDocument();
+        });
+
+        it('stay on screen while the song is paused', async () => {
             addEntry(FIRST);
             const player = await startedStage();
             vi.useFakeTimers();
@@ -560,10 +613,11 @@ describe('Stage', () => {
 
             act(() => vi.advanceTimersByTime(5000));
 
-            expect(corner()).not.toHaveClass('opacity-20');
+            expect(corner()).not.toHaveClass('opacity-0');
+            expect(bar()).not.toHaveClass('opacity-0');
         });
 
-        it('stays lit on the idle screen but still deselects', async () => {
+        it('stay on screen on the idle screen but still deselects', async () => {
             await renderReadyStage();
             clickButton('Start');
             await screen.findByRole('heading', { name: "Who's singing first?" });
@@ -572,8 +626,9 @@ describe('Stage', () => {
 
             act(() => vi.advanceTimersByTime(5000));
 
-            expect(corner()).not.toHaveClass('opacity-20');
+            expect(corner()).not.toHaveClass('opacity-0');
             expect(screen.getByRole('button', { name: 'End party' })).not.toHaveFocus();
+            expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
         });
 
         it('drops the confirmation when the controls fade', async () => {
@@ -588,6 +643,308 @@ describe('Stage', () => {
 
             expect(screen.queryByRole('button', { name: 'Keep singing' })).not.toBeInTheDocument();
             expect(endSession).not.toHaveBeenCalled();
+        });
+
+        describe('progress bar', () => {
+            it('shows how far the song is', async () => {
+                addEntry(FIRST);
+                await playingStage(61, 238);
+
+                tick();
+
+                expect(progress()).toHaveAttribute('aria-valuetext', '1:01 of 3:58');
+                expect(screen.getByText('1:01')).toBeInTheDocument();
+                expect(screen.getByText('3:58')).toBeInTheDocument();
+            });
+
+            it('shows no time until YouTube knows the length', async () => {
+                addEntry(FIRST);
+                await playingStage(0, 0);
+
+                tick();
+
+                expect(progress()).not.toHaveAttribute('aria-valuetext');
+                expect(screen.getAllByText('-:--')).toHaveLength(2);
+            });
+
+            it('starts over at zero for the next song', async () => {
+                addEntry(FIRST);
+                addEntry(SECOND);
+                const player = await playingStage(61, 238);
+                tick();
+
+                clickButton('Skip');
+
+                await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+                expect(progress()).toHaveAttribute('aria-valuenow', '0');
+            });
+        });
+
+        describe('end of a song', () => {
+            it('moves on a second before the video ends, so YouTube shows no end screen', async () => {
+                const first = addEntry(FIRST);
+                addEntry(SECOND);
+                const player = await playingStage(198.9, 200);
+                const callsBefore = advanceQueue.mock.calls.length;
+                tick();
+                expect(advanceQueue).toHaveBeenCalledTimes(callsBefore);
+
+                setClock(player, 199, 200);
+                tick();
+
+                await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+                expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, {
+                    entryId: first.id,
+                    outcome: 'completed',
+                    secondsPlayed: 199,
+                });
+            });
+
+            it("does not take the last song's time for the next one before it starts", async () => {
+                addEntry(FIRST);
+                const second = addEntry(SECOND);
+                addEntry(THIRD);
+                const player = await playingStage(199.5, 200);
+                tick();
+                await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+
+                // YouTube still answers with the old video's time until the new one plays.
+                act(() => vi.advanceTimersByTime(1000));
+                await act(async () => {});
+
+                expect(advanceQueue).not.toHaveBeenCalledWith(
+                    SESSION.id,
+                    expect.objectContaining({ entryId: second.id }),
+                );
+                expect(progress()).toHaveAttribute('aria-valuenow', '0');
+                expect(skipButton()).not.toHaveFocus();
+            });
+
+            it('asks to move on once while the next song is on its way', async () => {
+                addEntry(FIRST);
+                addEntry(SECOND);
+                const player = await playingStage(199.5, 200);
+                const callsBefore = advanceQueue.mock.calls.length;
+                fetchQueue.mockReturnValueOnce(new Promise(() => {})); // the next song never arrives
+
+                tick();
+                await act(async () => {});
+                tick();
+                act(() => player.stateChange(YT.PlayerState.ENDED));
+                tick();
+                await act(async () => {});
+
+                expect(advanceQueue).toHaveBeenCalledTimes(callsBefore + 1);
+            });
+
+            it('does not move on while paused in the last second', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(199.5, 200);
+                const callsBefore = advanceQueue.mock.calls.length;
+                act(() => player.stateChange(YT.PlayerState.PAUSED));
+
+                act(() => vi.advanceTimersByTime(1000));
+
+                expect(advanceQueue).toHaveBeenCalledTimes(callsBefore);
+            });
+
+            it('selects Skip for the last 20 seconds and keeps it while the controls sleep', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(179, 200);
+                tick();
+                expect(skipButton()).not.toHaveFocus();
+
+                setClock(player, 180, 200);
+                tick();
+                expect(skipButton()).toHaveFocus();
+
+                act(() => vi.advanceTimersByTime(5000));
+                expect(skipButton()).toHaveFocus();
+                expect(bar()).not.toHaveClass('opacity-0');
+                expect(corner()).toHaveClass('opacity-0');
+            });
+
+            it('leaves Skip alone after Back in the last 20 seconds', async () => {
+                addEntry(FIRST);
+                await playingStage(185, 200);
+                tick();
+                expect(skipButton()).toHaveFocus();
+
+                press('Escape');
+                tick();
+
+                expect(skipButton()).not.toHaveFocus();
+            });
+
+            it('still seeks with Left and Right while Skip is selected', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(185, 200);
+                tick();
+                expect(skipButton()).toHaveFocus();
+
+                press('ArrowLeft');
+
+                expect(player.seekTo).toHaveBeenLastCalledWith(175, true);
+            });
+
+            it('does not carry a selected Skip over to the next song', async () => {
+                addEntry(FIRST);
+                addEntry(SECOND);
+                const player = await playingStage(185, 200);
+                tick();
+                expect(skipButton()).toHaveFocus();
+
+                setClock(player, 199.2, 200);
+                tick();
+
+                await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+                expect(skipButton()).not.toHaveFocus();
+            });
+        });
+
+        describe('seeking', () => {
+            it('jumps ten seconds back and ahead with Left and Right', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(50, 200);
+
+                press('ArrowRight');
+                expect(player.seekTo).toHaveBeenLastCalledWith(60, true);
+                expect(progress()).toHaveAttribute('aria-valuetext', '1:00 of 3:20');
+
+                press('ArrowLeft');
+                expect(player.seekTo).toHaveBeenLastCalledWith(50, true);
+            });
+
+            it('adds up quick presses, although YouTube reports the old time for a moment', async () => {
+                addEntry(FIRST);
+                // The fake keeps answering 50 after every jump, as YouTube does right after one.
+                const player = await playingStage(50, 200);
+
+                press('ArrowRight');
+                press('ArrowRight');
+                press('ArrowRight');
+                tick();
+
+                expect(player.seekTo.mock.calls.map(([seconds]) => seconds)).toEqual([60, 70, 80]);
+                expect(progress()).toHaveAttribute('aria-valuenow', '80');
+            });
+
+            it('believes YouTube again a second after a jump it did not follow', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(50, 200);
+                press('ArrowRight');
+
+                act(() => vi.advanceTimersByTime(1250));
+
+                expect(progress()).toHaveAttribute('aria-valuenow', '50');
+                press('ArrowRight');
+                expect(player.seekTo).toHaveBeenLastCalledWith(60, true);
+            });
+
+            it('also jumps with the Rewind and Fast forward keys', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(50, 200);
+
+                press('MediaFastForward');
+                expect(player.seekTo).toHaveBeenLastCalledWith(60, true);
+
+                press('MediaRewind');
+                expect(player.seekTo).toHaveBeenLastCalledWith(50, true);
+            });
+
+            it('stays inside the song', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(195, 200);
+
+                press('ArrowRight');
+                expect(player.seekTo).toHaveBeenLastCalledWith(198, true);
+
+                setClock(player, 198, 200); // YouTube got there
+                tick();
+                press('Escape'); // Skip was selected for the last seconds
+                setClock(player, 4, 200);
+                press('ArrowLeft');
+                expect(player.seekTo).toHaveBeenLastCalledWith(0, true);
+            });
+
+            it('waits until YouTube knows the length', async () => {
+                addEntry(FIRST);
+                const player = await playingStage(0, 0);
+
+                press('ArrowRight');
+
+                expect(player.seekTo).not.toHaveBeenCalled();
+            });
+
+            it('does nothing while no song is playing', async () => {
+                const player = await renderReadyStage();
+                clickButton('Start');
+                await screen.findByRole('heading', { name: "Who's singing first?" });
+
+                press('ArrowRight');
+
+                expect(player.seekTo).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('skip', () => {
+            it('is selected with Down and logs the song as skipped', async () => {
+                const first = addEntry(FIRST);
+                addEntry(SECOND);
+                const player = await startedStage();
+                player.getCurrentTime.mockReturnValue(42.4);
+
+                press('ArrowDown');
+                expect(skipButton()).toHaveFocus();
+                clickButton('Skip');
+
+                await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+                expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, {
+                    entryId: first.id,
+                    outcome: 'skipped',
+                    secondsPlayed: 42,
+                });
+                expect(skipButton()).not.toHaveFocus();
+            });
+
+            it('skips one song when pressed twice before the next one arrives', async () => {
+                addEntry(FIRST);
+                addEntry(SECOND);
+                addEntry(THIRD);
+                const player = await startedStage();
+
+                clickButton('Skip');
+                clickButton('Skip');
+
+                await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+                expect(player.loadVideoById).not.toHaveBeenCalledWith(THIRD);
+            });
+
+            it('goes back to nothing selected with Up, and to End party with another Up', async () => {
+                addEntry(FIRST);
+                const player = await startedStage();
+                press('ArrowDown');
+
+                press('ArrowUp');
+                expect(document.body).toHaveFocus();
+                press('Enter');
+                expect(player.pauseVideo).toHaveBeenCalledTimes(1);
+
+                press('ArrowUp');
+                expect(screen.getByRole('button', { name: 'End party' })).toHaveFocus();
+            });
+
+            it('shows the idle screen when the last song is skipped', async () => {
+                addEntry(FIRST);
+                await startedStage();
+
+                clickButton('Skip');
+
+                expect(
+                    await screen.findByRole('heading', { name: "Who's next?" }),
+                ).toBeInTheDocument();
+                expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
+            });
         });
 
         it('leaves Start selected after the party ended', async () => {

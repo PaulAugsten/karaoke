@@ -22,16 +22,19 @@ export function Stage() {
         onClosed: leaveRoom,
         onError: showError,
     });
-    const { containerRef, ready, unMute, stop, togglePause, ...playback } = usePlayback({
-        sessionId: room?.id ?? null,
-        queue,
-        onAdvanced: refresh,
-        onError: showError,
-        onPlaying: wakeCorner, // a new song shows the corner controls for a moment
-    });
-    const { wake, reset, endButton, ...corner } = useCornerControls({
+    const { containerRef, ready, unMute, stop, togglePause, seekBy, skip, ...playback } =
+        usePlayback({
+            sessionId: room?.id ?? null,
+            queue,
+            onAdvanced: refresh,
+            onError: showError,
+            onPlaying: wakeCorner, // a new song shows the corner controls for a moment
+        });
+    const { wake, reset, endButton, skipButton, ...corner } = useCornerControls({
         enabled: room !== null,
         onPlayPause: togglePause,
+        onSeek: seekBy,
+        holdSkip: playback.nearEnd,
     });
 
     // After a reload join the session named in the URL.
@@ -97,7 +100,9 @@ export function Stage() {
                     playback={playback}
                     corner={corner}
                     endButton={endButton}
+                    skipButton={skipButton}
                     onEnd={endParty}
+                    onSkip={skip}
                 />
             )}
 
