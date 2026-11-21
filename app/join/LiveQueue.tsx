@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/Button';
 import { describeError } from '@/lib/describeError';
 import {
     type ConnectionStatus,
     fetchQueue,
     isSessionOpen,
     type QueueEntry,
+    removeQueueItem,
     subscribeToQueue,
 } from './joinConnection';
 import { NowSinging } from './NowSinging';
@@ -56,8 +58,21 @@ function useLiveQueue(sessionId: number, onEnded: () => void) {
 export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: () => void }) {
     const { queue, status, error } = useLiveQueue(sessionId, onEnded);
     const { heard, send } = usePlayerChannel(sessionId);
+    const [removing, setRemoving] = useState<number | null>(null);
+    const [removeError, setRemoveError] = useState<string | null>(null);
     const waiting = queue?.filter((entry) => entry.status !== 'playing') ?? [];
     const playing = queue?.find((entry) => entry.status === 'playing');
+
+    async function remove(entryId: number) {
+        setRemoving(entryId);
+        setRemoveError(null);
+        try {
+            await removeQueueItem(entryId);
+        } catch (err) {
+            setRemoveError(describeError(err));
+        }
+        setRemoving(null);
+    }
 
     return (
         <section aria-labelledby="queue-heading" className="flex flex-col gap-2">
@@ -73,9 +88,9 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
                           : 'Reconnecting...'}
                 </span>
             </div>
-            {error && (
+            {(error ?? removeError) && (
                 <p role="alert" className="text-danger text-sm">
-                    {error}
+                    {error ?? removeError}
                 </p>
             )}
             {queue === null && <p className="text-muted">Loading...</p>}
@@ -102,10 +117,21 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
                             >
                                 {index + 1}
                             </span>
-                            <span className="min-w-0 wrap-break-word">
+                            <span className="min-w-0 flex-1 wrap-break-word">
                                 <span className="block">{entry.title}</span>
                                 <span className="block text-muted text-sm">{byline(entry)}</span>
                             </span>
+                            {entry.mine && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    aria-label={`Remove ${entry.title}`}
+                                    disabled={removing === entry.id}
+                                    onClick={() => remove(entry.id)}
+                                >
+                                    Remove
+                                </Button>
+                            )}
                         </li>
                     ))}
                 </ol>
