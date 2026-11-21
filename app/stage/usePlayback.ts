@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { clampSeek, type PlayerCommand } from '@/lib/playerState';
 import {
     advanceQueue,
     type FinishedPlay,
@@ -13,8 +14,6 @@ import { isPermanentError } from './youtubeErrors';
 const TICK_MS = 250;
 /** A song moves on this long before its video ends, so YouTube's end screen never shows. */
 const END_EARLY_S = 1;
-/** A jump never lands closer to the end than this, so the song still plays out. */
-const SEEK_END_MARGIN_S = 2;
 /** How long a jump's target stands in for the time YouTube reports, at most. */
 const SEEK_SETTLE_MS = 1000;
 /** The last stretch of a song, in which Skip is offered for the outro. */
@@ -179,27 +178,55 @@ export function usePlayback({ sessionId, queue, onAdvanced, onError, onPlaying }
         if (sessionId !== null && !playing && hasQueued) advance(null);
     });
 
-    function togglePause() {
-        if (!playing) return;
-        if (paused) player.current?.playVideo();
-        else player.current?.pauseVideo();
+    function pause() {
+        if (playing && !paused) player.current?.pauseVideo();
     }
 
-    /** Jumps back (negative) or ahead in the song, stying inside it. */
-    function seekBy(seconds: number) {
+    function play() {
+        if (playing && paused) player.current?.playVideo();
+    }
+
+    function togglePause() {
+        if (paused) play();
+        else pause();
+    }
+
+    /** Jumps to a point in the song. */
+    function seekTo(seconds: number) {
         const current = player.current;
         if (!current || !playing) return;
         const duration = current.getDuration();
         if (duration <= 0) return; // YouTube does not know the length yet
-        // From the last jump's target, so quick presses add up.
-        const target = Math.min(Math.max(currentTime() + seconds, 0), duration - SEEK_END_MARGIN_S);
+        const target = clampSeek(seconds, duration);
         current.seekTo(target, true);
         lastSeek.current = { entryId: playing.id, position: target, at: Date.now() };
         setClock({ entryId: playing.id, position: target, duration });
     }
 
+    /** Jumps back (negative) or ahead in the song. */
+    function seekBy(seconds: number) {
+        seekTo(currentTime() + seconds);
+    }
+
     function skip() {
         if (playing) advance('skipped');
+    }
+
+    /** Carries out what a phone asked, if it is meant for the song that is playing. */
+    function obey(command: PlayerCommand) {
+        if (command.entryId !== playing?.id) return;
+        switch (command.action) {
+            case 'skip':
+                return skip();
+            case 'pause':
+                return pause();
+            case 'play':
+                return play();
+            case 'seekBy':
+                return seekBy(command.seconds);
+            case 'seekTo':
+                return seekTo(command.seconds);
+        }
     }
 
     function unMute() {
@@ -236,6 +263,7 @@ export function usePlayback({ sessionId, queue, onAdvanced, onError, onPlaying }
         togglePause,
         seekBy,
         skip,
+        obey,
         unMute,
         stop,
     };

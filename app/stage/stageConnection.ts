@@ -5,6 +5,7 @@ export type Session = Tables<'sessions'>;
 export type QueueItem = Tables<'queue_items'>;
 export type PlayOutcome = Database['public']['Enums']['play_outcome'];
 
+export { openPlayerChannel, type PlayerChannel } from '@/lib/supabase/player';
 export { type ConnectionStatus, isSessionOpen, subscribeToQueue } from '@/lib/supabase/queue';
 
 /** How the entry that was playing came to an end. */

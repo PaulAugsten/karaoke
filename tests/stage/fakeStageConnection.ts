@@ -2,9 +2,12 @@ import { vi } from 'vitest';
 import type {
     ConnectionStatus,
     FinishedPlay,
+    openPlayerChannel as openRealPlayerChannel,
+    PlayerChannel,
     QueueItem,
     Session,
 } from '@/app/stage/stageConnection';
+import type { PlayerCommand, PlayerState } from '@/lib/playerState';
 
 /**
  * In-memory stand-in for app/stage/stageConnection.ts. advanceQueue mirrors the
@@ -23,6 +26,9 @@ export const SESSION: Session = {
 let open = true;
 let entries: QueueItem[] = [];
 let notify: (() => void) | null = null;
+let phoneCommand: ((command: PlayerCommand) => void) | null = null;
+
+export const sentStates: PlayerState[] = [];
 
 /** Adds an entry to the fake database. Call `notifyChange` to tell the stage. */
 export function addEntry(videoId: string, status: QueueItem['status'] = 'queued'): QueueItem {
@@ -47,10 +53,17 @@ export function notifyChange() {
     notify?.();
 }
 
+/** Plays the part of a phone sending a command over the player channel. */
+export function commandFromPhone(command: PlayerCommand) {
+    phoneCommand?.(command);
+}
+
 export function resetFakeConnection() {
     entries = [];
     open = true;
     notify = null;
+    phoneCommand = null;
+    sentStates.length = 0;
 }
 
 export const createSession = vi.fn(async () => SESSION);
@@ -95,6 +108,23 @@ export const subscribeToQueue = vi.fn(
         onChange();
         return () => {
             notify = null;
+        };
+    },
+);
+
+export const closePlayerChannel = vi.fn();
+
+export const openPlayerChannel = vi.fn(
+    (_sessionId: number, handlers: Parameters<typeof openRealPlayerChannel>[1]): PlayerChannel => {
+        phoneCommand = handlers.onCommand ?? null;
+        void Promise.resolve().then(() => handlers.onReady?.());
+        return {
+            sendState: (state) => sentStates.push(state),
+            sendCommand: () => {},
+            close: () => {
+                phoneCommand = null;
+                closePlayerChannel();
+            },
         };
     },
 );

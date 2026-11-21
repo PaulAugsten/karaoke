@@ -6,6 +6,7 @@ import { RoomOverlay } from './RoomOverlay';
 import { StartScreen } from './StartScreen';
 import { createSession, endSession, findOpenSession, type Session } from './stageConnection';
 import { useCornerControls } from './useCornerControls';
+import { usePhoneRemote } from './usePhoneRemote';
 import { usePlayback } from './usePlayback';
 import { useQueue } from './useQueue';
 
@@ -22,7 +23,7 @@ export function Stage() {
         onClosed: leaveRoom,
         onError: showError,
     });
-    const { containerRef, ready, unMute, stop, togglePause, seekBy, skip, ...playback } =
+    const { containerRef, ready, unMute, stop, togglePause, seekBy, skip, obey, ...playback } =
         usePlayback({
             sessionId: room?.id ?? null,
             queue,
@@ -35,6 +36,16 @@ export function Stage() {
         onPlayPause: togglePause,
         onSeek: seekBy,
         holdSkip: playback.nearEnd,
+    });
+    usePhoneRemote({
+        sessionId: room?.id ?? null,
+        state: {
+            entryId: playback.playing?.id ?? null,
+            position: playback.position,
+            duration: playback.duration,
+            paused: playback.paused && playback.playing !== null,
+        },
+        onCommand: obey,
     });
 
     // After a reload join the session named in the URL.

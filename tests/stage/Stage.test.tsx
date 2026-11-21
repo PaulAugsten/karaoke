@@ -4,15 +4,19 @@ import StagePage from '@/app/stage/page';
 import {
     addEntry,
     advanceQueue,
+    closePlayerChannel,
     closeRoom,
+    commandFromPhone,
     createSession,
     endSession,
     fetchQueue,
     findOpenSession,
     notifyChange,
+    openPlayerChannel,
     reportUnplayable,
     resetFakeConnection,
     SESSION,
+    sentStates,
     subscribeToQueue,
 } from './fakeStageConnection';
 import { type FakePlayer, installFakeYouTube, latestPlayer, resetFakeYouTube } from './fakeYouTube';
@@ -959,6 +963,129 @@ describe('Stage', () => {
             act(() => vi.advanceTimersByTime(5000));
 
             expect(startButton).toHaveFocus();
+        });
+    });
+
+    describe('phone remote', () => {
+        it('tells the phones what plays and that it is paused', async () => {
+            const first = addEntry(FIRST);
+            const player = await playingStage(61, 238);
+            tick();
+
+            act(() => player.stateChange(YT.PlayerState.PAUSED));
+
+            expect(sentStates.at(-1)).toEqual({
+                entryId: first.id,
+                position: 61,
+                duration: 238,
+                paused: true,
+            });
+        });
+
+        it('says so at once after a jump, without waiting three seconds', async () => {
+            const first = addEntry(FIRST);
+            await playingStage(61, 238);
+            tick();
+
+            press('ArrowRight');
+
+            expect(sentStates.at(-1)).toEqual({
+                entryId: first.id,
+                position: 71,
+                duration: 238,
+                paused: false,
+            });
+        });
+
+        it('says nothing is playing once the queue is empty', async () => {
+            addEntry(FIRST);
+            await playingStage(61, 238);
+
+            clickButton('Skip');
+
+            await waitFor(() =>
+                expect(sentStates.at(-1)).toEqual({
+                    entryId: null,
+                    position: 0,
+                    duration: 0,
+                    paused: false,
+                }),
+            );
+        });
+
+        it('pauses and plays for a phone', async () => {
+            const first = addEntry(FIRST);
+            const player = await playingStage(61, 238);
+
+            act(() => commandFromPhone({ action: 'pause', entryId: first.id }));
+            expect(player.pauseVideo).toHaveBeenCalledTimes(1);
+            act(() => player.stateChange(YT.PlayerState.PAUSED));
+
+            act(() => commandFromPhone({ action: 'pause', entryId: first.id }));
+            expect(player.pauseVideo).toHaveBeenCalledTimes(1); // already paused
+            act(() => commandFromPhone({ action: 'play', entryId: first.id }));
+            expect(player.playVideo).toHaveBeenCalledTimes(1);
+        });
+
+        it('jumps for a phone, by ten seconds or to a point, inside the song', async () => {
+            const first = addEntry(FIRST);
+            const player = await playingStage(61, 238);
+
+            act(() => commandFromPhone({ action: 'seekBy', entryId: first.id, seconds: -10 }));
+            expect(player.seekTo).toHaveBeenLastCalledWith(51, true);
+
+            act(() => commandFromPhone({ action: 'seekTo', entryId: first.id, seconds: 120 }));
+            expect(player.seekTo).toHaveBeenLastCalledWith(120, true);
+
+            act(() => commandFromPhone({ action: 'seekTo', entryId: first.id, seconds: 999 }));
+            expect(player.seekTo).toHaveBeenLastCalledWith(236, true);
+        });
+
+        it('skips for a phone and logs it as skipped', async () => {
+            const first = addEntry(FIRST);
+            addEntry(SECOND);
+            const player = await playingStage(42, 238);
+
+            act(() => commandFromPhone({ action: 'skip', entryId: first.id }));
+
+            await waitFor(() => expect(player.loadVideoById).toHaveBeenLastCalledWith(SECOND));
+            expect(advanceQueue).toHaveBeenLastCalledWith(SESSION.id, {
+                entryId: first.id,
+                outcome: 'skipped',
+                secondsPlayed: 42,
+            });
+        });
+
+        it('ignores a command meant for a song that is no longer playing', async () => {
+            const first = addEntry(FIRST);
+            addEntry(SECOND);
+            addEntry(THIRD);
+            const player = await playingStage(61, 238);
+            const callsBefore = advanceQueue.mock.calls.length;
+
+            act(() => commandFromPhone({ action: 'skip', entryId: first.id + 1 }));
+            act(() => commandFromPhone({ action: 'seekBy', entryId: 999, seconds: 10 }));
+            act(() => commandFromPhone({ action: 'pause', entryId: 999 }));
+
+            expect(advanceQueue).toHaveBeenCalledTimes(callsBefore);
+            expect(player.seekTo).not.toHaveBeenCalled();
+            expect(player.pauseVideo).not.toHaveBeenCalled();
+        });
+
+        it('only listens to phones while the room is on screen', async () => {
+            window.history.replaceState(null, '', `/stage?room=${SESSION.code}`);
+            await renderReadyStage();
+            await screen.findByRole('button', { name: 'Resume' });
+            expect(openPlayerChannel).not.toHaveBeenCalled();
+
+            clickButton('Resume');
+            await screen.findByRole('heading', { name: "Who's singing first?" });
+            expect(openPlayerChannel).toHaveBeenCalledWith(SESSION.id, expect.anything());
+
+            clickButton('End party');
+            clickButton('End party');
+            await waitFor(() => expect(closePlayerChannel).toHaveBeenCalledTimes(1));
+            expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
         });
     });
 });
