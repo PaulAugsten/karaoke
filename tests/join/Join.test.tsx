@@ -8,6 +8,7 @@ import {
     enqueueVideo,
     joinSession,
     notifyChange,
+    removeQueueItem,
     resetFakeConnection,
     SESSION,
     searchVideos,
@@ -367,6 +368,75 @@ describe('Join', () => {
             fireEvent.change(bar);
             expect(sentCommands).toEqual([{ action: 'seekTo', entryId: AFRICA, seconds: 120 }]);
             expect(bar).toHaveValue('120');
+        });
+    });
+
+    describe('removing your own song', () => {
+        it('is offered on your own waiting songs only', async () => {
+            addEntry({
+                title: 'Africa',
+                artist: 'Toto',
+                singer: 'Sam',
+                status: 'playing',
+                mine: true,
+            });
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            addEntry({ title: 'Shallow', artist: 'Lady Gaga', singer: 'Mia' });
+            submitJoin(SESSION.code);
+
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+            await within(queue).findByText('Wonderwall');
+            expect(
+                within(queue)
+                    .getAllByRole('button', { name: /^Remove/ })
+                    .map((button) => button.getAttribute('aria-label')),
+            ).toEqual(['Remove Wonderwall']);
+        });
+
+        it('takes the song out of the queue', async () => {
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            addEntry({ title: 'Shallow', artist: 'Lady Gaga', singer: 'Mia' });
+            submitJoin(SESSION.code);
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+
+            fireEvent.click(
+                await within(queue).findByRole('button', { name: 'Remove Wonderwall' }),
+            );
+            await waitFor(() => expect(removeQueueItem).toHaveBeenCalledWith(1));
+            act(() => notifyChange());
+
+            await waitFor(() =>
+                expect(within(queue).queryByText('Wonderwall')).not.toBeInTheDocument(),
+            );
+            expect(within(queue).getByText('Shallow')).toBeInTheDocument();
+        });
+
+        it('says why a song could not be removed and lets you try again', async () => {
+            removeQueueItem.mockRejectedValueOnce(new Error('This song has already started'));
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            submitJoin(SESSION.code);
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+
+            fireEvent.click(
+                await within(queue).findByRole('button', { name: 'Remove Wonderwall' }),
+            );
+
+            expect(await within(queue).findByRole('alert')).toHaveTextContent(
+                'This song has already started',
+            );
+            expect(within(queue).getByRole('button', { name: 'Remove Wonderwall' })).toBeEnabled();
+        });
+
+        it('cannot be pressed twice while the first press is on its way', async () => {
+            removeQueueItem.mockReturnValueOnce(new Promise(() => {}));
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            submitJoin(SESSION.code);
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+
+            const button = await within(queue).findByRole('button', { name: 'Remove Wonderwall' });
+            fireEvent.click(button);
+
+            await waitFor(() => expect(button).toBeDisabled());
         });
     });
 });

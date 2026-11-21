@@ -33,8 +33,8 @@ let tvState: ((state: PlayerState) => void) | null = null;
 export const sentCommands: PlayerCommand[] = [];
 
 /** Adds an entry to the fake queue. Call notifyChange to tell the page. */
-export function addEntry(entry: Omit<QueueEntry, 'id' | 'status'> & Partial<QueueEntry>) {
-    entries.push({ id: entries.length + 1, status: 'queued', ...entry });
+export function addEntry(entry: Omit<QueueEntry, 'id' | 'status' | 'mine'> & Partial<QueueEntry>) {
+    entries.push({ id: entries.length + 1, status: 'queued', mine: false, ...entry });
 }
 
 /** Plays the part of a realtime event arriving. */
@@ -82,6 +82,10 @@ export const enqueueVideo = vi.fn<(roomCode: string, videoId: string) => Promise
 export const fetchQueue = vi.fn<(sessionId: number) => Promise<QueueEntry[]>>(async () =>
     entries.map((entry) => ({ ...entry })),
 );
+
+export const removeQueueItem = vi.fn<(entryId: number) => Promise<void>>(async (entryId) => {
+    entries = entries.filter((entry) => entry.id !== entryId);
+});
 
 export const subscribeToQueue = vi.fn(
     (_sessionId: number, onChange: () => void, onStatus: (status: ConnectionStatus) => void) => {
