@@ -11,6 +11,7 @@ export type SearchResult = Database['public']['Functions']['search_videos']['Ret
 export interface QueueEntry {
     id: number;
     status: Tables<'queue_items'>['status'];
+    videoId: string;
     title: string;
     artist: string;
     singer: string | null;
@@ -61,7 +62,9 @@ export async function fetchQueue(sessionId: number): Promise<QueueEntry[]> {
     const [{ data, error }, { data: auth }] = await Promise.all([
         supabase
             .from('queue_items')
-            .select('id, status, singers(name, user_id), videos(raw_title, songs(artist, title))')
+            .select(
+                'id, status, video_id, singers(name, user_id), videos(raw_title, songs(artist, title))',
+            )
             .eq('session_id', sessionId)
             .in('status', ['queued', 'playing'])
             .order('position')
@@ -73,6 +76,7 @@ export async function fetchQueue(sessionId: number): Promise<QueueEntry[]> {
     return data.map((row) => ({
         id: row.id,
         status: row.status,
+        videoId: row.video_id,
         title: row.videos.songs?.title || row.videos.raw_title,
         artist: row.videos.songs?.artist ?? '',
         singer: row.singers?.name ?? null,
