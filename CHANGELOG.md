@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/[secure]/karaoke/compare/v1.11.0...v1.12.0) (2026-11-21)
+
+
+### Features
+
+* remove songs added by yourself from the queue ([#30](https://github.com/[secure]/karaoke/issues/30)) ([6caa74e](https://github.com/[secure]/karaoke/commit/6caa74ede4a9116ccbd611f99e1bd2bc2068ad36))
+
 # [1.11.0](https://github.com/[secure]/karaoke/compare/v1.10.0...v1.11.0) (2026-11-21)
 
 
