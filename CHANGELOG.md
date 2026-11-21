@@ -1,3 +1,10 @@
+## [1.12.1](https://github.com/[secure]/karaoke/compare/v1.12.0...v1.12.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* add the same song twice to the queue ([#31](https://github.com/[secure]/karaoke/issues/31)) ([50bcee0](https://github.com/[secure]/karaoke/commit/50bcee0d5d7d61a38c1f48e2d3424cbc1e101d15))
+
 # [1.12.0](https://github.com/[secure]/karaoke/compare/v1.11.0...v1.12.0) (2026-11-21)
 
 
