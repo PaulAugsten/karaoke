@@ -1,62 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/Button';
 import { describeError } from '@/lib/describeError';
-import {
-    type ConnectionStatus,
-    fetchQueue,
-    isSessionOpen,
-    type QueueEntry,
-    removeQueueItem,
-    subscribeToQueue,
-} from './joinConnection';
+import { type ConnectionStatus, type QueueEntry, removeQueueItem } from './joinConnection';
 import { NowSinging } from './NowSinging';
 import { usePlayerChannel } from './usePlayerChannel';
 
-/** The session's queue, refetched on every realtime change */
-function useLiveQueue(sessionId: number, onEnded: () => void) {
-    const [queue, setQueue] = useState<QueueEntry[] | null>(null);
-    const [status, setStatus] = useState<ConnectionStatus>('CONNECTING');
-    const [error, setError] = useState<string | null>(null);
-    const [refreshCount, setRefreshCount] = useState(0);
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCount only triggers a reload
-    useEffect(() => {
-        let cancelled = false;
-        Promise.all([fetchQueue(sessionId), isSessionOpen(sessionId)])
-            .then(([entries, open]) => {
-                if (cancelled) return;
-                if (!open) return onEnded();
-                setQueue(entries);
-                setError(null);
-            })
-            .catch((err) => {
-                if (!cancelled) setError(describeError(err));
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [sessionId, refreshCount, onEnded]);
-
-    useEffect(() => {
-        const refresh = () => setRefreshCount((n) => n + 1);
-        const unsubscribe = subscribeToQueue(sessionId, refresh, setStatus);
-        const onVisible = () => {
-            if (document.visibilityState === 'visible') refresh();
-        };
-        document.addEventListener('visibilitychange', onVisible);
-        return () => {
-            unsubscribe();
-            document.removeEventListener('visibilitychange', onVisible);
-        };
-    }, [sessionId]);
-
-    return { queue, status, error };
+interface LiveQueueProps {
+    sessionId: number;
+    queue: QueueEntry[] | null;
+    status: ConnectionStatus;
+    error: string | null;
 }
 
-export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: () => void }) {
-    const { queue, status, error } = useLiveQueue(sessionId, onEnded);
+export function LiveQueue({ sessionId, queue, status, error }: LiveQueueProps) {
     const { heard, send } = usePlayerChannel(sessionId);
     const [removing, setRemoving] = useState<number | null>(null);
     const [removeError, setRemoveError] = useState<string | null>(null);

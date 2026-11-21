@@ -33,8 +33,16 @@ let tvState: ((state: PlayerState) => void) | null = null;
 export const sentCommands: PlayerCommand[] = [];
 
 /** Adds an entry to the fake queue. Call notifyChange to tell the page. */
-export function addEntry(entry: Omit<QueueEntry, 'id' | 'status' | 'mine'> & Partial<QueueEntry>) {
-    entries.push({ id: entries.length + 1, status: 'queued', mine: false, ...entry });
+export function addEntry(
+    entry: Omit<QueueEntry, 'id' | 'status' | 'mine' | 'videoId'> & Partial<QueueEntry>,
+) {
+    const id = entries.length + 1;
+    entries.push({ id, status: 'queued', mine: false, videoId: `video-${id}`, ...entry });
+}
+
+/** Plays the part of the TV moving on. */
+export function finishEntry(entryId: number) {
+    entries = entries.filter((entry) => entry.id !== entryId);
 }
 
 /** Plays the part of a realtime event arriving. */
@@ -76,7 +84,10 @@ export const searchVideos = vi.fn<(query: string, signal: AbortSignal) => Promis
 );
 
 export const enqueueVideo = vi.fn<(roomCode: string, videoId: string) => Promise<void>>(
-    async () => {},
+    async (_roomCode, videoId) => {
+        const song = CATALOG.find((item) => item.video_id === videoId)!;
+        addEntry({ videoId, title: song.title, artist: song.artist, singer: 'Sam', mine: true });
+    },
 );
 
 export const fetchQueue = vi.fn<(sessionId: number) => Promise<QueueEntry[]>>(async () =>
