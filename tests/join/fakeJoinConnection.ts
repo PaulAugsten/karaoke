@@ -1,10 +1,13 @@
 import { vi } from 'vitest';
 import type {
     ConnectionStatus,
+    openPlayerChannel as openRealPlayerChannel,
+    PlayerChannel,
     QueueEntry,
     SearchResult,
     Session,
 } from '@/app/join/joinConnection';
+import type { PlayerCommand, PlayerState } from '@/lib/playerState';
 
 /** In-memory stand-in for app/join/joinConnection.ts. */
 
@@ -25,6 +28,9 @@ const CATALOG: SearchResult[] = [
 let entries: QueueEntry[] = [];
 let open = true;
 let notify: (() => void) | null = null;
+let tvState: ((state: PlayerState) => void) | null = null;
+
+export const sentCommands: PlayerCommand[] = [];
 
 /** Adds an entry to the fake queue. Call notifyChange to tell the page. */
 export function addEntry(entry: Omit<QueueEntry, 'id' | 'status'> & Partial<QueueEntry>) {
@@ -36,10 +42,17 @@ export function notifyChange() {
     notify?.();
 }
 
+/** Plays the part of the TV saying what plays over the player channel. */
+export function stateFromTV(state: PlayerState) {
+    tvState?.(state);
+}
+
 export function resetFakeConnection() {
     entries = [];
     open = true;
     notify = null;
+    tvState = null;
+    sentCommands.length = 0;
 }
 
 export const joinSession = vi.fn<(code: string, name: string) => Promise<Session>>(async (code) => {
@@ -77,6 +90,19 @@ export const subscribeToQueue = vi.fn(
         onChange();
         return () => {
             notify = null;
+        };
+    },
+);
+
+export const openPlayerChannel = vi.fn(
+    (_sessionId: number, handlers: Parameters<typeof openRealPlayerChannel>[1]): PlayerChannel => {
+        tvState = handlers.onState ?? null;
+        return {
+            sendState: () => {},
+            sendCommand: (command) => sentCommands.push(command),
+            close: () => {
+                tvState = null;
+            },
         };
     },
 );

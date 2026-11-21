@@ -11,6 +11,8 @@ import {
     resetFakeConnection,
     SESSION,
     searchVideos,
+    sentCommands,
+    stateFromTV,
     subscribeToQueue,
 } from './fakeJoinConnection';
 
@@ -30,11 +32,24 @@ async function joinedSearchBox() {
     return screen.findByRole('searchbox', { name: 'Search songs' });
 }
 
+/** Joins with Africa playing (entry 1) and returns the queue. */
+async function joinedWithSongPlaying() {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    addEntry({ title: 'Africa', artist: 'Toto', singer: 'Sam', status: 'playing' });
+    submitJoin(SESSION.code);
+    const queue = await screen.findByRole('region', { name: 'Queue' });
+    await within(queue).findByText('Africa');
+    return queue;
+}
+
+const AFRICA = 1;
+
 describe('Join', () => {
     afterEach(() => {
         resetFakeConnection();
         vi.clearAllMocks();
         vi.restoreAllMocks();
+        vi.useRealTimers();
         localStorage.clear();
         window.history.replaceState(null, '', '/');
     });
@@ -241,5 +256,117 @@ describe('Join', () => {
 
         expect(await screen.findByRole('alert')).toHaveTextContent('This party has ended.');
         expect(screen.getByRole('button', { name: 'Join the room' })).toBeInTheDocument();
+    });
+
+    describe('now singing', () => {
+        it('shows how far the song on the TV is and counts on between messages', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: false }));
+            const bar = within(queue).getByRole('slider', { name: 'Song position' });
+            expect(bar).toHaveValue('61');
+            expect(bar).toHaveAttribute('aria-valuetext', '1:01 of 3:58');
+            expect(within(queue).getByText('3:58')).toBeInTheDocument();
+
+            // The phone counts on in steps of a quarter second.
+            act(() => vi.advanceTimersByTime(2250));
+            expect(bar).toHaveValue('63');
+            expect(within(queue).getByText('1:03')).toBeInTheDocument();
+        });
+
+        it('stands still while the TV is paused and offers Play', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: true }));
+            act(() => vi.advanceTimersByTime(2000));
+
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toHaveValue('61');
+            expect(within(queue).getByRole('button', { name: 'Play' })).toBeEnabled();
+        });
+
+        it('waits for the TV until it says something', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            expect(within(queue).getByText('Waiting for the TV...')).toBeInTheDocument();
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toBeDisabled();
+            for (const name of ['-10', 'Pause', '+10', 'Skip']) {
+                expect(within(queue).getByRole('button', { name })).toBeDisabled();
+            }
+        });
+
+        it('ignores a time that belongs to another song', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: 99, position: 61, duration: 238, paused: false }));
+
+            expect(within(queue).getByText('Waiting for the TV...')).toBeInTheDocument();
+            expect(within(queue).queryByText('3:58')).not.toBeInTheDocument();
+        });
+
+        it('stops showing a time after ten seconds without a word from the TV', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: false }));
+
+            act(() => vi.advanceTimersByTime(9500));
+            expect(within(queue).queryByText('Waiting for the TV...')).not.toBeInTheDocument();
+
+            act(() => vi.advanceTimersByTime(1000));
+            expect(within(queue).getByText('Waiting for the TV...')).toBeInTheDocument();
+            expect(within(queue).getByRole('button', { name: 'Skip' })).toBeDisabled();
+        });
+
+        it('keeps the jumps off until the TV knows the length', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: AFRICA, position: 0, duration: 0, paused: false }));
+
+            expect(within(queue).getByRole('button', { name: '+10' })).toBeDisabled();
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toBeDisabled();
+            expect(within(queue).getByRole('button', { name: 'Pause' })).toBeEnabled();
+            expect(within(queue).getByRole('button', { name: 'Skip' })).toBeEnabled();
+        });
+
+        it('asks the TV to pause, play, jump and skip, naming the song', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: false }));
+
+            fireEvent.click(within(queue).getByRole('button', { name: 'Pause' }));
+            // Shown at once, before the TV confirms it.
+            fireEvent.click(within(queue).getByRole('button', { name: 'Play' }));
+            fireEvent.click(within(queue).getByRole('button', { name: '+10' }));
+            fireEvent.click(within(queue).getByRole('button', { name: '-10' }));
+            fireEvent.click(within(queue).getByRole('button', { name: 'Skip' }));
+
+            expect(sentCommands).toEqual([
+                { action: 'pause', entryId: AFRICA },
+                { action: 'play', entryId: AFRICA },
+                { action: 'seekBy', entryId: AFRICA, seconds: 10 },
+                { action: 'seekBy', entryId: AFRICA, seconds: -10 },
+                { action: 'skip', entryId: AFRICA },
+            ]);
+        });
+
+        it('shows a jump at once, before the TV confirms it', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: true }));
+
+            fireEvent.click(within(queue).getByRole('button', { name: '+10' }));
+
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toHaveValue('71');
+        });
+
+        it('jumps when the bar is let go, not while it is dragged', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: true }));
+            const bar = within(queue).getByRole('slider', { name: 'Song position' });
+
+            fireEvent.input(bar, { target: { value: '120' } });
+            expect(sentCommands).toEqual([]);
+            expect(within(queue).getByText('2:00')).toBeInTheDocument();
+
+            fireEvent.change(bar);
+            expect(sentCommands).toEqual([{ action: 'seekTo', entryId: AFRICA, seconds: 120 }]);
+            expect(bar).toHaveValue('120');
+        });
     });
 });

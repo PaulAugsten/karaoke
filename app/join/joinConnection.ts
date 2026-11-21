@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { Database, Tables } from '@/lib/supabase/database.types';
 
+export { openPlayerChannel, type PlayerChannel } from '@/lib/supabase/player';
 export { type ConnectionStatus, isSessionOpen, subscribeToQueue } from '@/lib/supabase/queue';
 
 export type Session = Tables<'sessions'>;

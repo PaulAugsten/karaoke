@@ -9,6 +9,8 @@ import {
     type QueueEntry,
     subscribeToQueue,
 } from './joinConnection';
+import { NowSinging } from './NowSinging';
+import { usePlayerChannel } from './usePlayerChannel';
 
 /** The session's queue, refetched on every realtime change */
 function useLiveQueue(sessionId: number, onEnded: () => void) {
@@ -53,6 +55,7 @@ function useLiveQueue(sessionId: number, onEnded: () => void) {
 
 export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: () => void }) {
     const { queue, status, error } = useLiveQueue(sessionId, onEnded);
+    const { heard, send } = usePlayerChannel(sessionId);
     const waiting = queue?.filter((entry) => entry.status !== 'playing') ?? [];
     const playing = queue?.find((entry) => entry.status === 'playing');
 
@@ -78,14 +81,13 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
             {queue === null && <p className="text-muted">Loading...</p>}
             {queue?.length === 0 && <p className="text-muted">The queue is empty. Add a song!</p>}
             {playing && (
-                <div className="rounded-xl border border-line border-l-4 border-l-accent bg-surface px-3 py-2">
-                    <span className="flex items-center gap-2 font-bold text-accent text-xs uppercase tracking-widest">
-                        <LevelBars />
-                        <span>Now singing</span>
-                    </span>
-                    <span className="block wrap-break-word font-bold">{playing.title}</span>
-                    <span className="block text-muted text-sm">{byline(playing)}</span>
-                </div>
+                <NowSinging
+                    entryId={playing.id}
+                    title={playing.title}
+                    byline={byline(playing)}
+                    heard={heard}
+                    onCommand={send}
+                />
             )}
             {waiting.length > 0 && (
                 <ol className="flex flex-col gap-2">
@@ -114,15 +116,4 @@ export function LiveQueue({ sessionId, onEnded }: { sessionId: number; onEnded: 
 
 function byline(entry: QueueEntry): string {
     return [entry.artist, entry.singer].filter(Boolean).join(' · ');
-}
-
-/** Three small bars that bounce like a level meter. They stand still for reduced motion. */
-function LevelBars() {
-    return (
-        <span aria-hidden="true" className="flex h-3 items-end gap-0.5">
-            <span className="h-full w-0.5 origin-bottom animate-level rounded-full bg-accent motion-reduce:animate-none" />
-            <span className="h-full w-0.5 origin-bottom animate-level rounded-full bg-accent [animation-delay:-0.4s] motion-reduce:animate-none" />
-            <span className="h-full w-0.5 origin-bottom animate-level rounded-full bg-accent [animation-delay:-0.7s] motion-reduce:animate-none" />
-        </span>
-    );
 }
