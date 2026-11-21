@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/[secure]/karaoke/compare/v1.10.0...v1.11.0) (2026-11-21)
+
+
+### Features
+
+* added more remote controls to the phone page ([#29](https://github.com/[secure]/karaoke/issues/29)) ([1d1087c](https://github.com/[secure]/karaoke/commit/1d1087cbe5ef6dd5e5f3f45af70ce3547fe38c99))
+
 # [1.10.0](https://github.com/[secure]/karaoke/compare/v1.9.0...v1.10.0) (2026-11-20)
 
 
