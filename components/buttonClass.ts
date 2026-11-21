@@ -1,5 +1,5 @@
 export type Variant = 'primary' | 'outline' | 'danger';
-export type Size = 'md' | 'lg' | 'xl';
+export type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 const VARIANTS: Record<Variant, string> = {
     primary: 'bg-accent text-accent-ink',
@@ -8,6 +8,7 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const SIZES: Record<Size, string> = {
+    sm: 'rounded-lg px-3 py-2 text-base',
     md: 'rounded-xl px-4 py-3 text-lg',
     lg: 'rounded-xl px-5 py-3 text-xl',
     xl: 'rounded-2xl px-10 py-5 text-3xl',
