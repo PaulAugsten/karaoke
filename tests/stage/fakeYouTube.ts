@@ -11,6 +11,8 @@ export class FakePlayer {
     unMute = vi.fn();
     destroy = vi.fn();
     getCurrentTime = vi.fn(() => 0);
+    getDuration = vi.fn(() => 0);
+    seekTo = vi.fn();
 
     constructor(
         readonly target: HTMLElement,

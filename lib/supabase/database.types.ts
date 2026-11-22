@@ -569,6 +569,7 @@ export type Database = {
                 Args: { p_code: number; p_video_id: string };
                 Returns: undefined;
             };
+            remove_queue_item: { Args: { p_item_id: number }; Returns: undefined };
             search_videos: {
                 Args: { p_query: string };
                 Returns: {

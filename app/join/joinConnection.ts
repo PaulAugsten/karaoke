@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { Database, Tables } from '@/lib/supabase/database.types';
 
+export { openPlayerChannel, type PlayerChannel } from '@/lib/supabase/player';
 export { type ConnectionStatus, isSessionOpen, subscribeToQueue } from '@/lib/supabase/queue';
 
 export type Session = Tables<'sessions'>;
@@ -10,9 +11,11 @@ export type SearchResult = Database['public']['Functions']['search_videos']['Ret
 export interface QueueEntry {
     id: number;
     status: Tables<'queue_items'>['status'];
+    videoId: string;
     title: string;
     artist: string;
     singer: string | null;
+    mine: boolean;
 }
 
 /** Gives this device an anonymous account the first time and reuses it afterwards. */
@@ -55,19 +58,33 @@ export async function enqueueVideo(roomCode: string, videoId: string): Promise<v
 
 /** The entries still to come. */
 export async function fetchQueue(sessionId: number): Promise<QueueEntry[]> {
-    const { data, error } = await createClient()
-        .from('queue_items')
-        .select('id, status, singers(name), videos(raw_title, songs(artist, title))')
-        .eq('session_id', sessionId)
-        .in('status', ['queued', 'playing'])
-        .order('position')
-        .order('id');
+    const supabase = createClient();
+    const [{ data, error }, { data: auth }] = await Promise.all([
+        supabase
+            .from('queue_items')
+            .select(
+                'id, status, video_id, singers(name, user_id), videos(raw_title, songs(artist, title))',
+            )
+            .eq('session_id', sessionId)
+            .in('status', ['queued', 'playing'])
+            .order('position')
+            .order('id'),
+        supabase.auth.getSession(),
+    ]);
     if (error) throw error;
+    const me = auth.session?.user.id ?? null;
     return data.map((row) => ({
         id: row.id,
         status: row.status,
+        videoId: row.video_id,
         title: row.videos.songs?.title || row.videos.raw_title,
         artist: row.videos.songs?.artist ?? '',
         singer: row.singers?.name ?? null,
+        mine: me !== null && row.singers?.user_id === me,
     }));
+}
+
+export async function removeQueueItem(entryId: number): Promise<void> {
+    const { error } = await createClient().rpc('remove_queue_item', { p_item_id: entryId });
+    if (error) throw error;
 }

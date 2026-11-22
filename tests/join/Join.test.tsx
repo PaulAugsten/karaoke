@@ -6,11 +6,15 @@ import {
     addEntry,
     closeRoom,
     enqueueVideo,
+    finishEntry,
     joinSession,
     notifyChange,
+    removeQueueItem,
     resetFakeConnection,
     SESSION,
     searchVideos,
+    sentCommands,
+    stateFromTV,
     subscribeToQueue,
 } from './fakeJoinConnection';
 
@@ -30,11 +34,24 @@ async function joinedSearchBox() {
     return screen.findByRole('searchbox', { name: 'Search songs' });
 }
 
+/** Joins with Africa playing (entry 1) and returns the queue. */
+async function joinedWithSongPlaying() {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    addEntry({ title: 'Africa', artist: 'Toto', singer: 'Sam', status: 'playing' });
+    submitJoin(SESSION.code);
+    const queue = await screen.findByRole('region', { name: 'Queue' });
+    await within(queue).findByText('Africa');
+    return queue;
+}
+
+const AFRICA = 1;
+
 describe('Join', () => {
     afterEach(() => {
         resetFakeConnection();
         vi.clearAllMocks();
         vi.restoreAllMocks();
+        vi.useRealTimers();
         localStorage.clear();
         window.history.replaceState(null, '', '/');
     });
@@ -100,13 +117,118 @@ describe('Join', () => {
     it('adds a tapped result to the queue', async () => {
         const box = await joinedSearchBox();
         fireEvent.change(box, { target: { value: 'queen' } });
-        const result = await screen.findByRole('button', { name: /Bohemian Rhapsody/ });
+        const result = await screen.findByRole('button', { name: /^Bohemian Rhapsody/ });
 
         fireEvent.click(result);
 
-        await waitFor(() => expect(result).toBeDisabled());
-        expect(result).toHaveTextContent('Added');
+        await waitFor(() => expect(result).toHaveTextContent('✓ In queue'));
         expect(enqueueVideo).toHaveBeenCalledWith('ABCD', 'fJ9rUzIMcZQ');
+        const queue = screen.getByRole('region', { name: 'Queue' });
+        expect(within(queue).getByText('Bohemian Rhapsody')).toBeInTheDocument();
+    });
+
+    describe('a song that is already in the queue', () => {
+        /** Puts Bohemian Rhapsody in the queue, playing, sung by Alex. */
+        function bohemianRhapsodyPlaying() {
+            addEntry({
+                title: 'Bohemian Rhapsody',
+                artist: 'Queen',
+                singer: 'Alex',
+                videoId: 'fJ9rUzIMcZQ',
+                status: 'playing',
+            });
+        }
+
+        it('is marked in the results, with how many times it is there', async () => {
+            bohemianRhapsodyPlaying();
+            addEntry({
+                title: 'Bohemian Rhapsody',
+                artist: 'Queen',
+                singer: 'Mia',
+                videoId: 'fJ9rUzIMcZQ',
+            });
+            const box = await joinedSearchBox();
+
+            fireEvent.change(box, { target: { value: 'queen' } });
+            expect(
+                await screen.findByRole('button', { name: /^Bohemian Rhapsody.*✓ In queue ×2/ }),
+            ).toBeEnabled();
+
+            fireEvent.change(box, { target: { value: 'rick' } });
+            expect(
+                await screen.findByRole('button', { name: /^Never Gonna Give You Up/ }),
+            ).not.toHaveTextContent('In queue');
+        });
+
+        it('can be added again', async () => {
+            bohemianRhapsodyPlaying();
+            const box = await joinedSearchBox();
+            fireEvent.change(box, { target: { value: 'queen' } });
+            const result = await screen.findByRole('button', {
+                name: /^Bohemian Rhapsody.*✓ In queue/,
+            });
+
+            fireEvent.click(result);
+
+            await waitFor(() => expect(result).toHaveTextContent('✓ In queue ×2'));
+            expect(enqueueVideo).toHaveBeenCalledTimes(1);
+            expect(result).toBeEnabled();
+        });
+
+        it('loses its mark once it has played', async () => {
+            bohemianRhapsodyPlaying();
+            const box = await joinedSearchBox();
+            fireEvent.change(box, { target: { value: 'queen' } });
+            const result = await screen.findByRole('button', {
+                name: /^Bohemian Rhapsody.*✓ In queue/,
+            });
+
+            finishEntry(1);
+            act(() => notifyChange());
+
+            await waitFor(() => expect(result).not.toHaveTextContent('In queue'));
+        });
+    });
+
+    it('cannot add twice while the first add is on its way', async () => {
+        enqueueVideo.mockReturnValueOnce(new Promise(() => {}));
+        const box = await joinedSearchBox();
+        fireEvent.change(box, { target: { value: 'queen' } });
+        const result = await screen.findByRole('button', { name: /^Bohemian Rhapsody/ });
+
+        fireEvent.click(result);
+        await waitFor(() => expect(result).toBeDisabled());
+        fireEvent.click(result);
+
+        expect(result).toHaveTextContent('Adding...');
+        expect(enqueueVideo).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps showing Add while the song is on its way, so the row keeps its size', async () => {
+        enqueueVideo.mockReturnValueOnce(new Promise(() => {}));
+        const box = await joinedSearchBox();
+        fireEvent.change(box, { target: { value: 'queen' } });
+        const result = await screen.findByRole('button', { name: /^Bohemian Rhapsody/ });
+        expect(result).toHaveAccessibleName(/Add$/);
+
+        fireEvent.click(result);
+        await waitFor(() => expect(result).toBeDisabled());
+
+        expect(result).toHaveAccessibleName(/Adding\.\.\.$/);
+        expect(within(result).getByText('Add')).toBeInTheDocument();
+    });
+
+    it('says why a song could not be added and lets you try again', async () => {
+        enqueueVideo.mockRejectedValueOnce(new Error('This room is closed'));
+        const box = await joinedSearchBox();
+        fireEvent.change(box, { target: { value: 'queen' } });
+        const result = await screen.findByRole('button', { name: /^Bohemian Rhapsody/ });
+
+        fireEvent.click(result);
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('This room is closed');
+        expect(result).toBeEnabled();
+        expect(result).not.toHaveTextContent('In queue');
     });
 
     it('says when nothing matches', async () => {
@@ -133,13 +255,15 @@ describe('Join', () => {
     it('closes the results on Escape after a song was tapped', async () => {
         const box = await joinedSearchBox();
         fireEvent.change(box, { target: { value: 'queen' } });
-        const result = await screen.findByRole('button', { name: /Bohemian Rhapsody/ });
+        const result = await screen.findByRole('button', { name: /^Bohemian Rhapsody/ });
         fireEvent.click(result);
-        await waitFor(() => expect(result).toBeDisabled());
+        await waitFor(() => expect(result).toHaveTextContent('✓ In queue'));
 
         fireEvent.keyDown(result, { key: 'Escape' });
 
-        expect(screen.queryByRole('button', { name: /Bohemian Rhapsody/ })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: /^Bohemian Rhapsody/ }),
+        ).not.toBeInTheDocument();
     });
 
     it('closes the results on a tap outside and brings them back on focus', async () => {
@@ -241,5 +365,188 @@ describe('Join', () => {
 
         expect(await screen.findByRole('alert')).toHaveTextContent('This party has ended.');
         expect(screen.getByRole('button', { name: 'Join the room' })).toBeInTheDocument();
+    });
+
+    describe('now singing', () => {
+        it('shows how far the song on the TV is and counts on between messages', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: false }));
+            const bar = within(queue).getByRole('slider', { name: 'Song position' });
+            expect(bar).toHaveValue('61');
+            expect(bar).toHaveAttribute('aria-valuetext', '1:01 of 3:58');
+            expect(within(queue).getByText('3:58')).toBeInTheDocument();
+
+            // The phone counts on in steps of a quarter second.
+            act(() => vi.advanceTimersByTime(2250));
+            expect(bar).toHaveValue('63');
+            expect(within(queue).getByText('1:03')).toBeInTheDocument();
+        });
+
+        it('stands still while the TV is paused and offers Play', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: true }));
+            act(() => vi.advanceTimersByTime(2000));
+
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toHaveValue('61');
+            expect(within(queue).getByRole('button', { name: 'Play' })).toBeEnabled();
+        });
+
+        it('waits for the TV until it says something', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            expect(within(queue).getByText('Waiting for the TV...')).toBeInTheDocument();
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toBeDisabled();
+            for (const name of ['-10', 'Pause', '+10', 'Skip']) {
+                expect(within(queue).getByRole('button', { name })).toBeDisabled();
+            }
+        });
+
+        it('ignores a time that belongs to another song', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: 99, position: 61, duration: 238, paused: false }));
+
+            expect(within(queue).getByText('Waiting for the TV...')).toBeInTheDocument();
+            expect(within(queue).queryByText('3:58')).not.toBeInTheDocument();
+        });
+
+        it('stops showing a time after ten seconds without a word from the TV', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: false }));
+
+            act(() => vi.advanceTimersByTime(9500));
+            expect(within(queue).queryByText('Waiting for the TV...')).not.toBeInTheDocument();
+
+            act(() => vi.advanceTimersByTime(1000));
+            expect(within(queue).getByText('Waiting for the TV...')).toBeInTheDocument();
+            expect(within(queue).getByRole('button', { name: 'Skip' })).toBeDisabled();
+        });
+
+        it('keeps the jumps off until the TV knows the length', async () => {
+            const queue = await joinedWithSongPlaying();
+
+            act(() => stateFromTV({ entryId: AFRICA, position: 0, duration: 0, paused: false }));
+
+            expect(within(queue).getByRole('button', { name: '+10' })).toBeDisabled();
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toBeDisabled();
+            expect(within(queue).getByRole('button', { name: 'Pause' })).toBeEnabled();
+            expect(within(queue).getByRole('button', { name: 'Skip' })).toBeEnabled();
+        });
+
+        it('asks the TV to pause, play, jump and skip, naming the song', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: false }));
+
+            fireEvent.click(within(queue).getByRole('button', { name: 'Pause' }));
+            // Shown at once, before the TV confirms it.
+            fireEvent.click(within(queue).getByRole('button', { name: 'Play' }));
+            fireEvent.click(within(queue).getByRole('button', { name: '+10' }));
+            fireEvent.click(within(queue).getByRole('button', { name: '-10' }));
+            fireEvent.click(within(queue).getByRole('button', { name: 'Skip' }));
+
+            expect(sentCommands).toEqual([
+                { action: 'pause', entryId: AFRICA },
+                { action: 'play', entryId: AFRICA },
+                { action: 'seekBy', entryId: AFRICA, seconds: 10 },
+                { action: 'seekBy', entryId: AFRICA, seconds: -10 },
+                { action: 'skip', entryId: AFRICA },
+            ]);
+        });
+
+        it('shows a jump at once, before the TV confirms it', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: true }));
+
+            fireEvent.click(within(queue).getByRole('button', { name: '+10' }));
+
+            expect(within(queue).getByRole('slider', { name: 'Song position' })).toHaveValue('71');
+        });
+
+        it('jumps when the bar is let go, not while it is dragged', async () => {
+            const queue = await joinedWithSongPlaying();
+            act(() => stateFromTV({ entryId: AFRICA, position: 61, duration: 238, paused: true }));
+            const bar = within(queue).getByRole('slider', { name: 'Song position' });
+
+            fireEvent.input(bar, { target: { value: '120' } });
+            expect(sentCommands).toEqual([]);
+            expect(within(queue).getByText('2:00')).toBeInTheDocument();
+
+            fireEvent.change(bar);
+            expect(sentCommands).toEqual([{ action: 'seekTo', entryId: AFRICA, seconds: 120 }]);
+            expect(bar).toHaveValue('120');
+        });
+    });
+
+    describe('removing your own song', () => {
+        it('is offered on your own waiting songs only', async () => {
+            addEntry({
+                title: 'Africa',
+                artist: 'Toto',
+                singer: 'Sam',
+                status: 'playing',
+                mine: true,
+            });
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            addEntry({ title: 'Shallow', artist: 'Lady Gaga', singer: 'Mia' });
+            submitJoin(SESSION.code);
+
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+            await within(queue).findByText('Wonderwall');
+            expect(
+                within(queue)
+                    .getAllByRole('button', { name: /^Remove/ })
+                    .map((button) => button.getAttribute('aria-label')),
+            ).toEqual(['Remove Wonderwall']);
+        });
+
+        it('takes the song out of the queue', async () => {
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            addEntry({ title: 'Shallow', artist: 'Lady Gaga', singer: 'Mia' });
+            submitJoin(SESSION.code);
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+
+            fireEvent.click(
+                await within(queue).findByRole('button', { name: 'Remove Wonderwall' }),
+            );
+            await waitFor(() => expect(removeQueueItem).toHaveBeenCalledWith(1));
+            act(() => notifyChange());
+
+            await waitFor(() =>
+                expect(within(queue).queryByText('Wonderwall')).not.toBeInTheDocument(),
+            );
+            expect(within(queue).getByText('Shallow')).toBeInTheDocument();
+        });
+
+        it('says why a song could not be removed and lets you try again', async () => {
+            removeQueueItem.mockRejectedValueOnce(new Error('This song has already started'));
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            submitJoin(SESSION.code);
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+
+            fireEvent.click(
+                await within(queue).findByRole('button', { name: 'Remove Wonderwall' }),
+            );
+
+            expect(await within(queue).findByRole('alert')).toHaveTextContent(
+                'This song has already started',
+            );
+            expect(within(queue).getByRole('button', { name: 'Remove Wonderwall' })).toBeEnabled();
+        });
+
+        it('cannot be pressed twice while the first press is on its way', async () => {
+            removeQueueItem.mockReturnValueOnce(new Promise(() => {}));
+            addEntry({ title: 'Wonderwall', artist: 'Oasis', singer: 'Sam', mine: true });
+            submitJoin(SESSION.code);
+            const queue = await screen.findByRole('region', { name: 'Queue' });
+
+            const button = await within(queue).findByRole('button', {
+                name: 'Remove Wonderwall',
+            });
+            fireEvent.click(button);
+
+            await waitFor(() => expect(button).toBeDisabled());
+        });
     });
 });

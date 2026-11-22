@@ -6,6 +6,7 @@ import { RoomOverlay } from './RoomOverlay';
 import { StartScreen } from './StartScreen';
 import { createSession, endSession, findOpenSession, type Session } from './stageConnection';
 import { useCornerControls } from './useCornerControls';
+import { usePhoneRemote } from './usePhoneRemote';
 import { usePlayback } from './usePlayback';
 import { useQueue } from './useQueue';
 
@@ -22,16 +23,29 @@ export function Stage() {
         onClosed: leaveRoom,
         onError: showError,
     });
-    const { containerRef, ready, unMute, stop, togglePause, ...playback } = usePlayback({
-        sessionId: room?.id ?? null,
-        queue,
-        onAdvanced: refresh,
-        onError: showError,
-        onPlaying: wakeCorner, // a new song shows the corner controls for a moment
-    });
-    const { wake, reset, endButton, ...corner } = useCornerControls({
+    const { containerRef, ready, unMute, stop, togglePause, seekBy, skip, obey, ...playback } =
+        usePlayback({
+            sessionId: room?.id ?? null,
+            queue,
+            onAdvanced: refresh,
+            onError: showError,
+            onPlaying: wakeCorner, // a new song shows the corner controls for a moment
+        });
+    const { wake, reset, endButton, skipButton, ...corner } = useCornerControls({
         enabled: room !== null,
         onPlayPause: togglePause,
+        onSeek: seekBy,
+        holdSkip: playback.nearEnd,
+    });
+    usePhoneRemote({
+        sessionId: room?.id ?? null,
+        state: {
+            entryId: playback.playing?.id ?? null,
+            position: playback.position,
+            duration: playback.duration,
+            paused: playback.paused && playback.playing !== null,
+        },
+        onCommand: obey,
     });
 
     // After a reload join the session named in the URL.
@@ -97,7 +111,9 @@ export function Stage() {
                     playback={playback}
                     corner={corner}
                     endButton={endButton}
+                    skipButton={skipButton}
                     onEnd={endParty}
+                    onSkip={skip}
                 />
             )}
 

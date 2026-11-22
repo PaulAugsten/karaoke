@@ -1,3 +1,31 @@
+## [1.12.1](https://github.com/[secure]/karaoke/compare/v1.12.0...v1.12.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* add the same song twice to the queue ([#31](https://github.com/[secure]/karaoke/issues/31)) ([50bcee0](https://github.com/[secure]/karaoke/commit/50bcee0d5d7d61a38c1f48e2d3424cbc1e101d15))
+
+# [1.12.0](https://github.com/[secure]/karaoke/compare/v1.11.0...v1.12.0) (2026-11-21)
+
+
+### Features
+
+* remove songs added by yourself from the queue ([#30](https://github.com/[secure]/karaoke/issues/30)) ([6caa74e](https://github.com/[secure]/karaoke/commit/6caa74ede4a9116ccbd611f99e1bd2bc2068ad36))
+
+# [1.11.0](https://github.com/[secure]/karaoke/compare/v1.10.0...v1.11.0) (2026-11-21)
+
+
+### Features
+
+* added more remote controls to the phone page ([#29](https://github.com/[secure]/karaoke/issues/29)) ([1d1087c](https://github.com/[secure]/karaoke/commit/1d1087cbe5ef6dd5e5f3f45af70ce3547fe38c99))
+
+# [1.10.0](https://github.com/[secure]/karaoke/compare/v1.9.0...v1.10.0) (2026-11-20)
+
+
+### Features
+
+* updated player stage with progress bar and skipping ([#28](https://github.com/[secure]/karaoke/issues/28)) ([85f9fbf](https://github.com/[secure]/karaoke/commit/85f9fbf8bd74ae1c3204f30d5bab3482f1165c64))
+
 # [1.9.0](https://github.com/[secure]/karaoke/compare/v1.8.0...v1.9.0) (2026-11-16)
 
 

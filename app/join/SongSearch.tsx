@@ -7,10 +7,16 @@ import { enqueueVideo, type SearchResult, searchVideos } from './joinConnection'
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 250;
 
-export function SongSearch({ roomCode }: { roomCode: string }) {
+interface SongSearchProps {
+    roomCode: string;
+    inQueue: ReadonlyMap<string, number>;
+    onAdded: () => void;
+}
+
+export function SongSearch({ roomCode, inQueue, onAdded }: SongSearchProps) {
     const [query, setQuery] = useState('');
     const [found, setFound] = useState<{ query: string; results: SearchResult[] } | null>(null);
-    const [addedIds, setAddedIds] = useState<ReadonlySet<string>>(new Set());
+    const [addingIds, setAddingIds] = useState<ReadonlySet<string>>(new Set());
     const [dismissed, setDismissed] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -52,12 +58,18 @@ export function SongSearch({ roomCode }: { roomCode: string }) {
 
     async function add(result: SearchResult) {
         setError(null);
+        setAddingIds((ids) => new Set(ids).add(result.video_id));
         try {
             await enqueueVideo(roomCode, result.video_id);
-            setAddedIds((ids) => new Set(ids).add(result.video_id));
+            onAdded();
         } catch (err) {
             setError(describeError(err));
         }
+        setAddingIds((ids) => {
+            const rest = new Set(ids);
+            rest.delete(result.video_id);
+            return rest;
+        });
     }
 
     return (
@@ -111,42 +123,67 @@ export function SongSearch({ roomCode }: { roomCode: string }) {
                         {noMatches && <p className="px-3 py-4 text-muted">No songs found</p>}
                         {results.length > 0 && (
                             <ul className="flex flex-col divide-y divide-line">
-                                {results.map((result) => {
-                                    const added = addedIds.has(result.video_id);
-                                    return (
-                                        <li key={result.video_id}>
-                                            <button
-                                                type="button"
-                                                disabled={added}
-                                                onClick={() => add(result)}
-                                                className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left focus-visible:-outline-offset-2"
-                                            >
-                                                <span className="min-w-0 break-words">
-                                                    <span className="block">{result.title}</span>
-                                                    {result.artist && (
-                                                        <span className="block text-muted text-sm">
-                                                            {result.artist}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                                {added ? (
-                                                    <span className="shrink-0 font-bold text-highlight text-sm">
-                                                        ✓ Added
-                                                    </span>
-                                                ) : (
-                                                    <span className="shrink-0 rounded-full border-2 border-field px-3 py-1 font-bold text-sm">
-                                                        Add
-                                                    </span>
-                                                )}
-                                            </button>
-                                        </li>
-                                    );
-                                })}
+                                {results.map((result) => (
+                                    <li key={result.video_id}>
+                                        <ResultRow
+                                            result={result}
+                                            copies={inQueue.get(result.video_id) ?? 0}
+                                            adding={addingIds.has(result.video_id)}
+                                            onAdd={() => add(result)}
+                                        />
+                                    </li>
+                                ))}
                             </ul>
                         )}
                     </div>
                 )}
             </div>
         </>
+    );
+}
+
+interface ResultRowProps {
+    result: SearchResult;
+    /** How many times this video is waiting or playing. */
+    copies: number;
+    adding: boolean;
+    onAdd: () => void;
+}
+
+/** One search result. It keeps its size when the song is added. */
+function ResultRow({ result, copies, adding, onAdd }: ResultRowProps) {
+    const count = copies > 1 ? ` ×${copies}` : '';
+    return (
+        <button
+            type="button"
+            disabled={adding}
+            onClick={onAdd}
+            className="flex w-full items-center gap-3 px-3 py-3 text-left focus-visible:-outline-offset-2 disabled:opacity-50"
+        >
+            <span className="min-w-0 flex-1 wrap-break-word">
+                <span className="block">{result.title}</span>
+                {result.artist && <span className="block text-muted text-sm">{result.artist}</span>}
+            </span>
+            {/* Always there, so a tick appearing never squeezes the title. */}
+            <span className="w-12 shrink-0 text-right font-bold text-highlight text-sm">
+                {copies > 0 && (
+                    <>
+                        <span aria-hidden="true">✓{count}</span>
+                        <span className="sr-only">✓ In queue{count}</span>
+                    </>
+                )}
+            </span>
+            {/* Says Add even while adding, so the pill keeps its width. */}
+            <span className="shrink-0 rounded-full border-2 border-field px-3 py-1 font-bold text-sm">
+                {adding ? (
+                    <>
+                        <span aria-hidden="true">Add</span>
+                        <span className="sr-only">Adding...</span>
+                    </>
+                ) : (
+                    'Add'
+                )}
+            </span>
+        </button>
     );
 }
