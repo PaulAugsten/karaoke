@@ -36,7 +36,7 @@
         "@supabase/supabase-js": "^2.119.0",
         "@vercel/analytics": "^2.0.1",
         "@vercel/speed-insights": "^2.1.0",
-        "next": "^16.4.2",
+        "next": "^16.4.6",
         "qrcode.react": "^4.2.0",
         "react": "^19.3.1",
         "react-dom": "^19.3.1"
@@ -44,7 +44,7 @@
     "devDependencies": {
         "@axe-core/playwright": "^4.14.0",
         "@biomejs/biome": "2.6.8",
-        "@next/bundle-analyzer": "^16.4.2",
+        "@next/bundle-analyzer": "^16.4.6",
         "@playwright/test": "^1.65.1",
         "@semantic-release/changelog": "^7.0.0",
         "@semantic-release/git": "^11.0.1",
@@ -60,7 +60,7 @@
         "@vitest/coverage-v8": "^5.1.0",
         "babel-plugin-react-compiler": "^1.0.0",
         "eslint": "^9.39.5",
-        "eslint-config-next": "^16.4.2",
+        "eslint-config-next": "^16.4.6",
         "jsdom": "^31.0.1",
         "knip": "^6.45.1",
         "semantic-release": "^25.0.9",
