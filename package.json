@@ -63,7 +63,7 @@
         "eslint-config-next": "^16.4.6",
         "jsdom": "^31.0.1",
         "knip": "^6.45.1",
-        "semantic-release": "^25.0.9",
+        "semantic-release": "^26.0.1",
         "size-limit": "^14.3.0",
         "supabase": "^3.1.0",
         "tailwindcss": "^4.3.5",
